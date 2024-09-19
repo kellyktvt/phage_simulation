@@ -1,0 +1,133 @@
+---
+title: "Recoded Codon Fitness Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+setwd("/stor/work/Wilke/kelly/phage_simulation")
+
+library(tidyverse)
+library(ggplot2)
+library(gtools)
+library(stringr)
+library(cowplot)
+library(readxl)
+SAVE_FIGS <- TRUE
+
+cbPalette <- c("#CC79A7", "#56B4E9", "#E69F00", "#F0E442", "#0072B2", "#D55E00", "#009E73", "#999999")
+
+# These are genes that are not included in the simulation and should be removed before comparing
+# simulations with experimental data
+IGNORE_GENES <- c("gene 10B",
+                "possible gene 5.5-5.7",
+                "gene 1.5",
+                "gene 1.6",
+                "gene 4.1",
+                "gene 4B",
+                "gene 0.6A",
+                "gene 0.6B",
+                "possible gene 0.6B",
+                "gene 0.5",
+                "gene 0.4")
+```
+
+```{r}
+# Load labels
+labels <- read_csv("output/id_map.csv") |> filter(!is.na(gene_number))
+# Function to load and process simulation data
+load_sim <- function(path, multiplier) {
+  read_tsv(path,
+          col_types = cols(
+            species = col_character(),
+            time = col_double(),
+            protein = col_double(),
+            transcript = col_double(),
+            ribo_density = col_double()
+          ),
+          show_col_types = FALSE) |> 
+    group_by(time) |> 
+    nest() |>
+    mutate(data = purrr::map(data, ~left_join(labels, ., by = c("pinetree" = "species")))) |>
+    unnest(cols = c(data)) |>
+    mutate(time = round(time)) |>
+    mutate(protein = if_else(is.na(protein), 0, protein),
+           transcript = if_else(is.na(transcript), 0, transcript),
+           multiplier = multiplier) |>
+    filter(!(pinetree %in% IGNORE_GENES), !is.na(gene_number))
+}
+```
+
+```{r}
+# Load simulation data for each multiplier
+multipliers <- c(1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1)
+sim_data <- lapply(multipliers, function(m) {
+  file_path <- sprintf("data/simulation/phage/parallel_output/output_%.1f.tsv", m)
+  load_sim(file_path, m)
+})
+sim_data <- bind_rows(sim_data)
+
+# Filter and select relevant data
+sims <- sim_data |>
+  filter(time == 1000, gene_number == "10A") |>
+  select(multiplier, protein)
+
+print(sims)
+#     time multiplier protein
+#    <dbl>      <dbl>   <dbl>
+#  1  1000        1     15110
+#  2  1000        0.9   14288
+#  3  1000        0.8   13886
+#  4  1000        0.7   13952
+#  5  1000        0.6   13070
+#  6  1000        0.5   12411
+#  7  1000        0.4   11227
+#  8  1000        0.3    9574
+#  9  1000        0.2    6830
+# 10  1000        0.1    2677
+
+# Calculate fitness using the equations below:
+# intrinsic growth rate: r = ((protein / 400) * exp(-12 * r) - 1) / 1
+# doublings per hour: d = log2(exp(60 * r))
+fit <- read_xlsx("data/recoded_fitness.xlsx")
+
+# Merge the fitness data with the sims data frame, adding only r and fitness columns
+sims <- sims |>
+  left_join(fit |> select(multiplier, r, fitness), by = "multiplier")
+
+print(sims)
+#     time multiplier protein     r fitness
+#    <dbl>      <dbl>   <dbl> <dbl>   <dbl>
+#  1  1000        1     15110 0.282    24.4
+#  2  1000        0.9   14288 0.278    24.0
+#  3  1000        0.8   13886 0.275    23.8
+#  4  1000        0.7   13952 0.276    23.9
+#  5  1000        0.6   13070 0.271    23.4
+#  6  1000        0.5   12411 0.267    23.1
+#  7  1000        0.4   11227 0.259    22.4
+#  8  1000        0.3    9574 0.246    21.3
+#  9  1000        0.2    6830 0.220    19.0
+# 10  1000        0.1    2677 0.147    12.7
+
+# Create the plot
+plot <- ggplot(sims, aes(x = multiplier, y = fitness)) +
+  geom_point(shape = 21, fill = "lightgray", color = "black", size = 7)+
+  scale_x_reverse() +
+  geom_smooth(method = "lm", se = FALSE, color = "black", size = 0.5) +
+  labs(x = "Weight Multiplier", y = "Fitness (doublings per hour)", title = "Fitness of Gene 10A Recoded") +
+  theme_minimal()
+
+print(plot)
+```
+
+```{r}
+# Create the plot for protein abundance vs fitness
+plot_protein_vs_fitness <- ggplot(sims, aes(x = protein, y = fitness)) +
+  geom_point(shape = 21, fill = "lightgray", color = "black", size = 7) +
+  geom_smooth(method = "lm", se = FALSE, color = "black", size = 0.5) +
+  labs(x = "Protein Abundance", y = "Fitness (doublings per hour)", title = "Protein Abundance vs Fitness") +
+  theme_minimal()
+
+print(plot_protein_vs_fitness)
+```

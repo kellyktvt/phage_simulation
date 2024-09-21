@@ -237,8 +237,8 @@ def main():
                          "ecolipol", "ecolipol-p", "ecolipol-2", "ecolipol-2-p"]
     phage.add_mask(500, mask_interactions)
 
-    norm_weights = normalize_weights(weights)
-    phage.add_weights(norm_weights)
+    #norm_weights = normalize_weights(weights)
+    #phage.add_weights(norm_weights)
 
     sim.register_genome(phage)
 
@@ -317,7 +317,7 @@ def main():
     sim.seed(34)
 
     sim.simulate(time_limit=1200, time_step=5,
-                 output="trna_phage_wildtype.tsv")
+                 output="data/simulation/phage/trna_phage_wildtype.tsv")
 
 
 if __name__ == "__main__":

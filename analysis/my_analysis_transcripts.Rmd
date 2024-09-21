@@ -1,0 +1,63 @@
+---
+title: "TRNA Model Transcript Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+setwd("/stor/work/Wilke/kelly/phage_simulation")
+
+library(tidyverse)
+library(ggplot2)
+library(gtools)
+library(stringr)
+library(cowplot)
+library(readxl)
+SAVE_FIGS <- TRUE
+
+cbPalette <- c("#CC79A7", "#56B4E9", "#E69F00", "#F0E442", "#0072B2", "#D55E00", "#009E73", "#999999")
+
+# These are genes that are not included in the simulation and should be removed before comparing
+# simulations with experimental data
+IGNORE_GENES <- c("gene 10B",
+                "possible gene 5.5-5.7",
+                "gene 1.5",
+                "gene 1.6",
+                "gene 4.1",
+                "gene 4B",
+                "gene 0.6A",
+                "gene 0.6B",
+                "possible gene 0.6B",
+                "gene 0.5",
+                "gene 0.4")
+```
+
+```{r}
+labels <- read_csv("../output/id_map.csv") %>% filter(!is.na(gene_number))
+load_sim <- function(path) {
+  read_tsv(path) %>% group_by(time) %>% nest() %>%
+    mutate(data = purrr::map(data, ~left_join(labels, ., by = c("pinetree" = "species")))) %>%
+    unnest() %>%
+    mutate(time = round(time)) %>%
+    mutate(protein = if_else(is.na(protein), 0, protein),
+           transcript = if_else(is.na(transcript), 0, transcript)) %>%
+    filter(!(pinetree %in% IGNORE_GENES), !is.na(gene_number))
+}
+
+data <- load_sim("../data/simulation/phage/trna_phage_wildtype.tsv")
+
+bar_sim_plot <- ggplot(data %>% filter(time == 1000), aes(x=factor(gene_number, gene_labels), 
+                                                             y=transcript, fill=factor(class))) +
+  geom_bar(stat = "identity") +
+  geom_vline(xintercept = (match(c("3.8", "4.7", "6.5", "18.5"), gene_labels)) - 0.5, 
+             linetype="dashed", color = "gray40") +
+  geom_vline(xintercept = (match(c("11"), gene_labels)) - 0.5) +
+  theme(legend.position = "none") +
+  labs(x="gene", y="simulated transcripts") +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values=cbPalette)
+
+if (SAVE_FIGS) {save_plot("./figures/trna_transcripts.pdf", bar_sim_plot, base_width = 8, base_height = 9)}
+```

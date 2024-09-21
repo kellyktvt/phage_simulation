@@ -1,4 +1,4 @@
-#!/stor/work/Wilke/kelly/phage_simulation/dynamic-trnas/bin/python3
+#!/stor/work/Wilke/kelly/phage_simulation/.venv-trnas/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

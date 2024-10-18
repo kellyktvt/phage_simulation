@@ -3,6 +3,7 @@ import pinetree as pt
 
 CELL_VOLUME = 1.1e-15
 PHI10_BIND = 1.82e7  # Binding constant for phi10
+#PHI10_BIND = 1.0e6  # Binding constant for phi10
 
 IGNORE_REGULATORY = ["E. coli promoter E[6]",
                      "T7 promoter phiOR",
@@ -107,7 +108,7 @@ def get_terminator_interactions(name):
     '''
     if name == "E. coli transcription terminator TE":
         return {'ecolipol': 1.0,
-                'ecolipol-p': 1.0,
+                'ecolipol-p': 1.0, 
                 'rnapol-1': 0.0,
                 'rnapol-3.5': 0.0}
     elif name == "T7 transcription terminator Tphi":
@@ -182,7 +183,6 @@ def tRNA_map_maker():
     
 #----------------------------------------------------------------------------
 
-
 def main():
     sim = pt.Model(cell_volume=CELL_VOLUME)
 
@@ -196,7 +196,12 @@ def main():
     record = SeqIO.read(handle, "genbank")
     genome_length = len(record.seq)
     phage = pt.Genome(name="phage", length=genome_length)
+
+#----------------------------------------------------------------------------
+
     phage.add_sequence(str(record.seq))
+
+#----------------------------------------------------------------------------
 
     for feature in record.features:
         weights = [0.0] * len(record.seq)
@@ -237,8 +242,12 @@ def main():
                          "ecolipol", "ecolipol-p", "ecolipol-2", "ecolipol-2-p"]
     phage.add_mask(500, mask_interactions)
 
-    #norm_weights = normalize_weights(weights)
-    #phage.add_weights(norm_weights)
+#----------------------------------------------------------------------------
+
+    # norm_weights = normalize_weights(weights)
+    # phage.add_weights(norm_weights)
+
+#----------------------------------------------------------------------------
 
     sim.register_genome(phage)
 
@@ -249,15 +258,16 @@ def main():
     sim.add_polymerase("ecolipol-2", 35, 45, 0)
     sim.add_polymerase("ecolipol-2-p", 35, 45, 0)
 
-    sim.add_ribosome(30, 30, 0)
+    sim.add_ribosome(30, 30, 0)   # originally speed of 30
 
-    sim.add_species("bound_ribosome", 10000)
+    sim.add_species("bound_ribosome", 10000)   # originally 10000
 
-    sim.add_species("bound_ecolipol", 1800)
+    sim.add_species("bound_ecolipol", 1800)   # originally 1800
     sim.add_species("bound_ecolipol_p", 0)
     sim.add_species("ecoli_genome", 0)
     sim.add_species("ecoli_transcript", 0)
 
+    # translation reactions
     sim.add_reaction(1e6, ["ecoli_transcript", "__ribosome"], [
                      "bound_ribosome"])
 
@@ -266,6 +276,7 @@ def main():
 
     sim.add_reaction(0.001925, ["ecoli_transcript"], ["degraded_transcript"])
 
+    # transcription reactions
     sim.add_reaction(1e7, ["ecolipol", "ecoli_genome"], ["bound_ecolipol"])
 
     sim.add_reaction(
@@ -277,6 +288,7 @@ def main():
     sim.add_reaction(0.04, ["bound_ecolipol_p"], [
                      "ecolipol-p", "ecoli_genome", "ecoli_transcript"])
 
+    # # protein modification reactions
     sim.add_reaction(3.8e7, ["protein_kinase-0.7", "ecolipol"],
                      ["ecolipol-p", "protein_kinase-0.7"])
 
@@ -291,17 +303,30 @@ def main():
 
     sim.add_reaction(1.1, ["ecolipol-2"], ["gp-2", "ecolipol"])
 
+    # # RNA polymerase and lysozyme reactions
     sim.add_reaction(3.8e9, ["lysozyme-3.5", "rnapol-1"], ["rnapol-3.5"])
 
     sim.add_reaction(3.5, ["rnapol-3.5"], ["lysozyme-3.5", "rnapol-1"])
 
     #--------------------------------------------------------------------------
+    import os
+    import sys
 
-    TRNA_CHRG_RATES = [100.0, 100.0] # strength of tRNA re-charging reaction [tRNA_a, tRNA_b]
-    TRNA_PROPORTIONS = (0.1, 0.9) # tRNA proportions, i.e. 90% total tRNA is type A, other 10% is type B
+    # strength of tRNA re-charging reaction [tRNA_a, tRNA_b]   
+    TRNA_CHRG_RATES = [100.0, 100.0]   # originally [100.0, 100.0]
+    
+    # tRNA proportions, i.e. 10% total tRNA is pref, other 90% is nonpref
+    pref_proportion = float(sys.argv[1])
+    nonpref_proportion = 1 - pref_proportion
+    TRNA_PROPORTIONS = (pref_proportion, nonpref_proportion)   # originally (0.1, 0.9)
+
+    # Generate a unique filename based on the multiplier
+    output_dir = "data/simulation/phage/trna_parallel_output"
+    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}.tsv")
+    
     TOTAL_TRNA = 2500 # total tRNA
 
-    ## tRNA/codon mapping: 
+    # tRNA/codon mapping: 
     tRNA_map = tRNA_map_maker()
 
     # initial tRNA species counts:
@@ -314,11 +339,12 @@ def main():
 
     #--------------------------------------------------------------------------
 
-    sim.seed(34)
+    seed_val = float(sys.argv[2])
+    sim.seed(seed_val)
 
-    sim.simulate(time_limit=1200, time_step=5,
-                 output="data/simulation/phage/trna_phage_wildtype.tsv")
-
+    sim.simulate(time_limit=1200, time_step=5,   # originally time_limit=1200
+                 #output="data/simulation/phage/trna_phage_prop7030.tsv"
+                 ouput=output_filename)
 
 if __name__ == "__main__":
     main()

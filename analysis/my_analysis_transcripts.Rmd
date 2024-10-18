@@ -34,7 +34,12 @@ IGNORE_GENES <- c("gene 10B",
 ```
 
 ```{r}
-labels <- read_csv("../output/id_map.csv") %>% filter(!is.na(gene_number))
+id_map <- read_csv("output/id_map.csv") %>% filter(!is.na(gene_number), !(pinetree %in% IGNORE_GENES))
+gene_labels <- unique(mixedsort(id_map$gene_number))
+```
+
+```{r}
+labels <- read_csv("output/id_map.csv") %>% filter(!is.na(gene_number))
 load_sim <- function(path) {
   read_tsv(path) %>% group_by(time) %>% nest() %>%
     mutate(data = purrr::map(data, ~left_join(labels, ., by = c("pinetree" = "species")))) %>%
@@ -45,19 +50,29 @@ load_sim <- function(path) {
     filter(!(pinetree %in% IGNORE_GENES), !is.na(gene_number))
 }
 
-data <- load_sim("../data/simulation/phage/trna_phage_wildtype.tsv")
+data <- load_sim("data/simulation/phage/trna_phage_wildtype.tsv")
 
-bar_sim_plot <- ggplot(data %>% filter(time == 1000), aes(x=factor(gene_number, gene_labels), 
-                                                             y=transcript, fill=factor(class))) +
+bar_sim_plot <- ggplot(data %>% filter(time == 900), aes(x=factor(gene_number, gene_labels), 
+                                                             y=protein, fill=factor(class))) +
   geom_bar(stat = "identity") +
   geom_vline(xintercept = (match(c("3.8", "4.7", "6.5", "18.5"), gene_labels)) - 0.5, 
              linetype="dashed", color = "gray40") +
   geom_vline(xintercept = (match(c("11"), gene_labels)) - 0.5) +
   theme(legend.position = "none") +
-  labs(x="gene", y="simulated transcripts") +
+  labs(x="gene", y="simulated proteins") +
   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
   scale_y_continuous(expand = c(0,0)) +
   scale_fill_manual(values=cbPalette)
 
-if (SAVE_FIGS) {save_plot("./figures/trna_transcripts.pdf", bar_sim_plot, base_width = 8, base_height = 9)}
+lineplot <- ggplot(data, aes(x=time, y=protein, group = gene_number, color=factor(class))) +
+  geom_line() +
+  scale_y_continuous(trans = "log10") + 
+  xlab("time (s)") +
+  theme(legend.title = element_blank(), legend.spacing.x = unit(2, 'pt')) + 
+  scale_color_manual(values=cbPalette, breaks=c("1","2","3"), labels=c("class I", "class II", "class III")) + xlim(0,1000) 
+
+if (SAVE_FIGS) {
+  save_plot("analysis/figures/trna_proteins_9010_900.pdf", bar_sim_plot, base_width = 8, base_height = 3)
+  save_plot("analysis/figures/trna_proteins_lineplot_9010_900.pdf", lineplot, base_height = 4, base_aspect_ratio = 1.7)
+}
 ```

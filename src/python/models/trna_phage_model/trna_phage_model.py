@@ -320,9 +320,12 @@ def main():
     nonpref_proportion = 1 - pref_proportion
     TRNA_PROPORTIONS = (pref_proportion, nonpref_proportion)   # originally (0.1, 0.9)
 
-    # Generate a unique filename based on the multiplier
-    output_dir = "data/simulation/phage/trna_parallel_output"
-    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}.tsv")
+    # get the seed value
+    seed_val = float(sys.argv[2])
+
+    # generate a unique filename based on the multiplier
+    output_dir = "/scratch/10081/kellyktvt/trna_parallel_output"
+    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}.tsv")
     
     TOTAL_TRNA = 2500 # total tRNA
 
@@ -337,14 +340,13 @@ def main():
     tRNA_rates = {"pref": TRNA_CHRG_RATES[0], "nonpref": TRNA_CHRG_RATES[1]}
     sim.add_trna(tRNA_map, tRNA_counts, tRNA_rates)
 
-    #--------------------------------------------------------------------------
-
-    seed_val = float(sys.argv[2])
     sim.seed(seed_val)
 
     sim.simulate(time_limit=1200, time_step=5,   # originally time_limit=1200
                  #output="data/simulation/phage/trna_phage_prop7030.tsv"
                  ouput=output_filename)
+
+    #--------------------------------------------------------------------------
 
 if __name__ == "__main__":
     main()

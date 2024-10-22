@@ -1,9 +1,10 @@
 from Bio import Entrez, SeqIO
 import pinetree as pt
+import time
+import urllib.error
 
 CELL_VOLUME = 1.1e-15
 PHI10_BIND = 1.82e7  # Binding constant for phi10
-#PHI10_BIND = 1.0e6  # Binding constant for phi10
 
 IGNORE_REGULATORY = ["E. coli promoter E[6]",
                      "T7 promoter phiOR",
@@ -181,25 +182,26 @@ def tRNA_map_maker():
 
     return tRNA_map
     
-#----------------------------------------------------------------------------
-
 def main():
     sim = pt.Model(cell_volume=CELL_VOLUME)
+    Entrez.email = "kelly.to@utexas.edu"
 
     # Download T7 wild-type genbank records
-    Entrez.email = "benjamin.r.jack@gmail.com"
-    handle = Entrez.efetch(db="nuccore",
-                           id=["NC_001604"],
-                           rettype="gb",
-                           retmode="text")
-
-    record = SeqIO.read(handle, "genbank")
-    genome_length = len(record.seq)
-    phage = pt.Genome(name="phage", length=genome_length)
-
-#----------------------------------------------------------------------------
-
-    phage.add_sequence(str(record.seq))
+    for attempt in range(5):
+        try:
+            handle = Entrez.efetch(db="nuccore", id=["NC_001604"], rettype="gb", retmode="text")
+            record = SeqIO.read(handle, "genbank")
+            phage = pt.Genome(name="phage", length=len(record.seq))
+            phage.add_sequence(str(record.seq))
+            print(f"Phage genome created")
+            break
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                time.sleep(2 ** attempt)  # Exponential backoff
+                print(f"Rate limit exceeded. Retrying...")
+            else:
+                print(f"Failed to fetch GenBank record: {e}")
+                break
 
 #----------------------------------------------------------------------------
 
@@ -308,7 +310,7 @@ def main():
 
     sim.add_reaction(3.5, ["rnapol-3.5"], ["lysozyme-3.5", "rnapol-1"])
 
-    #--------------------------------------------------------------------------
+#--------------------------------------------------------------------------
     import os
     import sys
 
@@ -320,9 +322,12 @@ def main():
     nonpref_proportion = 1 - pref_proportion
     TRNA_PROPORTIONS = (pref_proportion, nonpref_proportion)   # originally (0.1, 0.9)
 
-    # Generate a unique filename based on the multiplier
-    output_dir = "data/simulation/phage/trna_parallel_output"
-    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}.tsv")
+    # get the seed value
+    seed_val = int(sys.argv[2])
+
+    # generate a unique filename based on the multiplier
+    output_dir = "/scratch/10081/kellyktvt/trna_parallel_output"
+    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}.tsv")
     
     TOTAL_TRNA = 2500 # total tRNA
 
@@ -337,14 +342,13 @@ def main():
     tRNA_rates = {"pref": TRNA_CHRG_RATES[0], "nonpref": TRNA_CHRG_RATES[1]}
     sim.add_trna(tRNA_map, tRNA_counts, tRNA_rates)
 
-    #--------------------------------------------------------------------------
-
-    seed_val = float(sys.argv[2])
     sim.seed(seed_val)
 
     sim.simulate(time_limit=1200, time_step=5,   # originally time_limit=1200
                  #output="data/simulation/phage/trna_phage_prop7030.tsv"
-                 ouput=output_filename)
+                 output=output_filename)
+
+#--------------------------------------------------------------------------
 
 if __name__ == "__main__":
     main()

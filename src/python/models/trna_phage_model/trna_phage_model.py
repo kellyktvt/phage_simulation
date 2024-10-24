@@ -205,6 +205,23 @@ def main():
 
 #----------------------------------------------------------------------------
 
+    # # Extract the sequence of gene 10A
+    # gene_10A_sequence = None
+    # for feature in record.features:
+    #     if feature.type == "gene" and "gene 10A" in feature.qualifiers["note"]:
+    #         gene_10A_sequence = feature.extract(record.seq)
+    #         break
+
+    # from Bio.SeqRecord import SeqRecord
+
+    # if gene_10A_sequence:
+    #     # Save the sequence to a FASTA file
+    #     gene_10A_record = SeqRecord(gene_10A_sequence, id="gene_10A", description="gene 10A")
+    #     with open("gene_10A.fasta", "w") as fasta_file:
+    #         SeqIO.write(gene_10A_record, fasta_file, "fasta")
+    # else:
+    #     print("Gene 10A not found")
+
     for feature in record.features:
         weights = [0.0] * len(record.seq)
         # Convert to inclusive genomic coordinates

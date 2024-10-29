@@ -1,7 +1,9 @@
 from Bio import Entrez, SeqIO
+from Bio.SeqRecord import SeqRecord
 import pinetree as pt
 import time
 import urllib.error
+import sys
 
 CELL_VOLUME = 1.1e-15
 PHI10_BIND = 1.82e7  # Binding constant for phi10
@@ -203,24 +205,45 @@ def main():
                 print(f"Failed to fetch GenBank record: {e}")
                 break
 
-#----------------------------------------------------------------------------
-
-    # # Extract the sequence of gene 10A
+    # Extract the sequence of gene 10A
     # gene_10A_sequence = None
-    # for feature in record.features:
-    #     if feature.type == "gene" and "gene 10A" in feature.qualifiers["note"]:
-    #         gene_10A_sequence = feature.extract(record.seq)
-    #         break
-
-    # from Bio.SeqRecord import SeqRecord
+    gene10_start = None
+    gene10_stop = None
+    for feature in record.features:
+        if feature.type == "gene" and "gene 10A" in feature.qualifiers["note"]:
+            # print(f"Found gene 10A: {feature}")
+            # gene_10A_sequence = feature.extract(record.seq)
+            gene10_start = feature.location.start
+            gene10_stop = feature.location.end
+            break
 
     # if gene_10A_sequence:
+    #     print(f"Gene 10A sequence: {gene_10A_sequence}")
     #     # Save the sequence to a FASTA file
     #     gene_10A_record = SeqRecord(gene_10A_sequence, id="gene_10A", description="gene 10A")
     #     with open("gene_10A.fasta", "w") as fasta_file:
     #         SeqIO.write(gene_10A_record, fasta_file, "fasta")
+    #     print(f"Gene 10A sequence saved to {"gene_10A.fasta"}")
     # else:
     #     print("Gene 10A not found")
+
+    # Define the deoptimized sequence index
+    deoptimized_index = int(sys.argv[3])
+    # Read the deoptimized sequences from the FASTA file
+    deoptimized_sequences = list(SeqIO.parse("src/python/models/trna_phage_model/gene_10A_deoptimized.fasta", "fasta"))
+
+    if deoptimized_index < len(deoptimized_sequences):
+        deoptimized_sequence = deoptimized_sequences[deoptimized_index].seq
+        # Replace the original gene 10A sequence with the deoptimized sequence
+        if gene10_start is not None and gene10_stop is not None:
+            record.seq = record.seq[:gene10_start] + deoptimized_sequence + record.seq[gene10_stop:]
+            print(f"New genome sequence with deoptimized gene 10A at index {deoptimized_index} and seed {sys.argv[2]}")
+        else:
+            print("gene10_start or gene10_stop is None")
+    else:
+        print(f"Deoptimized sequence at index {deoptimized_index} not found")
+
+#----------------------------------------------------------------------------
 
     for feature in record.features:
         weights = [0.0] * len(record.seq)
@@ -328,8 +351,6 @@ def main():
     sim.add_reaction(3.5, ["rnapol-3.5"], ["lysozyme-3.5", "rnapol-1"])
 
 #--------------------------------------------------------------------------
-    import os
-    import sys
 
     # strength of tRNA re-charging reaction [tRNA_a, tRNA_b]   
     TRNA_CHRG_RATES = [100.0, 100.0]   # originally [100.0, 100.0]
@@ -342,9 +363,12 @@ def main():
     # get the seed value
     seed_val = int(sys.argv[2])
 
+    # get the fop value
+    fop_val = deoptimized_index + 1
+
     # generate a unique filename based on the multiplier
     output_dir = "/scratch/10081/kellyktvt/trna_parallel_output"
-    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}.tsv")
+    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{deoptimized_codon_val}.tsv")
     
     TOTAL_TRNA = 2500 # total tRNA
 

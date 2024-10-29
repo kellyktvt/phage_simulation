@@ -8,7 +8,7 @@ from Bio.SeqRecord import SeqRecord
 from codon_tools import CodonOptimizer, FopScorer, opt_codons_E_coli
 
 
-def deoptimize(seq, gene_description, Fop_start, Fop_step, Fop_stop, start_window = 14, end_window = 14, max_wait_count = 5000, opt_codons = opt_codons_E_coli):
+def deoptimize(seq, gene_description, Fop_start, Fop_step, Fop_stop, start_window = 0, end_window = 0, max_wait_count = 5000, opt_codons = opt_codons_E_coli):
     """Parameters:
 * ``seq``: coding sequence to de-optimize
 * ``start_window``: number of codons to omit at beginning of sequence
@@ -27,11 +27,8 @@ def deoptimize(seq, gene_description, Fop_start, Fop_step, Fop_stop, start_windo
     tolerance = 0.01 # how closely do we want to match the final number?
     records = [SeqRecord(seq, id='',
                  description = gene_description + " -- Fop = %f" % Fop_orig)]
-    while True:
-        if Fop_step < 0:
-            Fop_target = Fop_start - tolerance
-        else:
-            Fop_target = Fop_start + tolerance
+    
+    for Fop_target in [i / 10.0 for i in range(1, 10)]:
         if Fop_target < score:
             maximize = False
         else:
@@ -44,10 +41,6 @@ def deoptimize(seq, gene_description, Fop_start, Fop_step, Fop_stop, start_windo
         description = gene_description + " -- recoded to Fop = %f (keeping first %i and last %i codons unchanged)" % (score, start_window, end_window) 
         seq_record = SeqRecord(seq, id = '', description = description)
         records.append(seq_record)
-        
-        Fop_start += Fop_step
-        if Fop_step*(Fop_stop-Fop_start) < 0:
-            break
     
     return records
     
@@ -88,4 +81,7 @@ if __name__ == "__main__":
                          args.Fop_start, args.Fop_step, args.Fop_stop,
                          args.exclude_front, args.exclude_back,
                          args.max_wait)
-    SeqIO.write(records, sys.stdout, "fasta")
+    # save the deoptimized sequences to a new FASTA file
+    output_filename = "gene_10A_deoptimized.fasta"
+    with open(output_filename, "w") as output_handle:
+        SeqIO.write(records, output_handle, "fasta")

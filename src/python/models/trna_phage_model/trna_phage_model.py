@@ -194,9 +194,6 @@ def main():
         try:
             handle = Entrez.efetch(db="nuccore", id=["NC_001604"], rettype="gb", retmode="text")
             record = SeqIO.read(handle, "genbank")
-            phage = pt.Genome(name="phage", length=len(record.seq))
-            phage.add_sequence(str(record.seq))
-            print(f"Phage genome created")
             break
         except urllib.error.HTTPError as e:
             if e.code == 429:
@@ -230,8 +227,10 @@ def main():
 
     # Define the deoptimized sequence index
     deoptimized_index = int(sys.argv[3])
+
     # Read the deoptimized sequences from the FASTA file
     deoptimized_sequences = list(SeqIO.parse("src/python/models/trna_phage_model/gene_10A_deoptimized.fasta", "fasta"))
+    print(deoptimized_sequences)
 
     if deoptimized_index < len(deoptimized_sequences):
         deoptimized_sequence = deoptimized_sequences[deoptimized_index].seq
@@ -239,10 +238,14 @@ def main():
         if gene10_start is not None and gene10_stop is not None:
             record.seq = record.seq[:gene10_start] + deoptimized_sequence + record.seq[gene10_stop:]
             print(f"New genome sequence with deoptimized gene 10A at index {deoptimized_index} and seed {sys.argv[2]}")
+            #print(record.seq[gene10_start:gene10_stop])
         else:
             print("gene10_start or gene10_stop is None")
     else:
         print(f"Deoptimized sequence at index {deoptimized_index} not found")
+
+    phage = pt.Genome(name="phage", length=len(record.seq))
+    phage.add_sequence(str(record.seq))
 
 #----------------------------------------------------------------------------
 

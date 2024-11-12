@@ -4,6 +4,7 @@ import pinetree as pt
 import time
 import urllib.error
 import sys
+import os
 
 CELL_VOLUME = 1.1e-15
 PHI10_BIND = 1.82e7  # Binding constant for phi10
@@ -368,7 +369,7 @@ def main():
 
     # generate a unique filename based on the multiplier
     output_dir = "/scratch/10081/kellyktvt/trna_parallel_output"
-    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{deoptimized_codon_val}.tsv")
+    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop_val}.tsv")
     
     TOTAL_TRNA = 2500 # total tRNA
 

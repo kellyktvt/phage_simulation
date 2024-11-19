@@ -34,11 +34,6 @@ IGNORE_GENES <- c("gene 10B",
 ```
 
 ```{r}
-id_map <- read_csv("output/id_map.csv") %>% filter(!is.na(gene_number), !(pinetree %in% IGNORE_GENES))
-gene_labels <- unique(mixedsort(id_map$gene_number))
-```
-
-```{r}
 labels <- read_csv("output/id_map.csv") %>% filter(!is.na(gene_number))
 load_sim <- function(paths) {
   data_list <- lapply(paths, function(path) {
@@ -98,6 +93,6 @@ avg_plot_420 <- ggplot(avg_proteins_420, aes(x = proportion, y = avg_protein)) +
 
 
 if (SAVE_FIGS) {
-  save_plot("analysis/figures/trna_avg_gene10proteins_by_proportion_420s.pdf", avg_plot_420, base_width = 12, base_height = 16)
+  save_plot("analysis/figures/avg_gene10proteins_by_trna_proportion_420s.pdf", avg_plot_420, base_width = 12, base_height = 16)
 }
 ```

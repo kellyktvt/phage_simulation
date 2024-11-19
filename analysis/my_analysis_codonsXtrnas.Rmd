@@ -1,0 +1,133 @@
+---
+title: "Codon Model Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+setwd("/stor/work/Wilke/kelly/phage_simulation")
+
+library(tidyverse)
+library(ggplot2)
+library(gtools)
+library(stringr)
+library(cowplot)
+library(readxl)
+SAVE_FIGS <- TRUE
+
+cbPalette <- c("#CC79A7", "#56B4E9", "#E69F00", "#F0E442", "#0072B2", "#D55E00", "#009E73", "#999999")
+
+# These are genes that are not included in the simulation and should be removed before comparing
+# simulations with experimental data
+IGNORE_GENES <- c("gene 10B",
+                "possible gene 5.5-5.7",
+                "gene 1.5",
+                "gene 1.6",
+                "gene 4.1",
+                "gene 4B",
+                "gene 0.6A",
+                "gene 0.6B",
+                "possible gene 0.6B",
+                "gene 0.5",
+                "gene 0.4")
+```
+
+```{r}
+labels <- read_csv("output/id_map.csv") %>% filter(!is.na(gene_number))
+load_sim <- function(paths) {
+  data_list <- lapply(paths, function(path) {
+    read_tsv(path) %>%
+      mutate(file = path) %>%
+      group_by(time) %>%
+      nest() %>%
+      mutate(data = purrr::map(data, ~full_join(labels, ., by = c("pinetree" = "species")))) %>%
+      unnest() %>%
+      mutate(time = round(time)) %>%
+      mutate(protein = if_else(is.na(protein), 0, protein),
+             transcript = if_else(is.na(transcript), 0, transcript)) %>%
+      filter(
+        !(pinetree %in% IGNORE_GENES),
+        (!is.na(gene_number) | 
+         str_detect(pinetree, "nonpref_charged|nonpref_uncharged|pref_charged|pref_uncharged"))
+      )
+  })
+  bind_rows(data_list)
+}
+
+# Define the output directory
+output_dir <- "data/simulation/phage/codon_parallel_output"
+
+# Generate file paths
+seeds <- 1:3
+fop_proportions <- 1:9
+
+file_paths <- expand.grid(seed = seeds, fop = fop_proportions) %>%
+  mutate(file_name = sprintf("trna_phage_pref0.7_%d_fop%d.tsv", seed, fop)) %>%
+  mutate(full_path = file.path(output_dir, file_name))
+
+# Load all simulations
+all_data <- load_sim(file_paths$full_path)
+
+# Add proportion and seed columns
+all_data <- all_data %>%
+  mutate(
+    seed = as.numeric(str_extract(file, "(?<=_)0-9")),
+    proportion = as.numeric(str_extract(file, "(?<=pref)[0-9]\\.[0-9]")),
+    fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+"))
+  )
+
+# Filter the data 
+nonpref_charged_data <- all_data %>%
+  filter(str_detect(pinetree, "nonpref_charged"))
+nonpref_uncharged_data <- all_data %>%
+  filter(str_detect(pinetree, "nonpref_uncharged"))
+
+pref_charged_data <- all_data %>%
+  filter(str_detect(pinetree, "pref_charged"))
+pref_uncharged_data <- all_data %>%
+  filter(str_detect(pinetree, "pref_uncharged"))
+
+# Calculate average fraction of charged tRNAs for each proportion at 825 seconds
+avg_nonpref_charged_825 <- nonpref_charged_data %>%
+  filter(time == 825) %>%
+  group_by(fop) %>%
+  summarize(avg_charged = mean(protein), .groups = "drop")
+
+avg_nonpref_total_825 <- nonpref_uncharged_data %>%
+  filter(time == 825) %>%
+  group_by(fop) %>%
+  summarize(avg_total = mean(protein), .groups = "drop")
+
+avg_pref_charged_825 <- pref_charged_data %>%
+  filter(time == 825) %>%
+  group_by(fop) %>%
+  summarize(avg_charged = mean(protein), .groups = "drop")
+
+avg_pref_total_825 <- pref_uncharged_data %>%
+  filter(time == 825) %>%
+  group_by(fop) %>%
+  summarize(avg_total = mean(protein), .groups = "drop")
+
+# Combine the data for plotting
+avg_nonpref_825 <- left_join(avg_nonpref_charged_825, avg_nonpref_total_825, by = "fop") %>%
+  mutate(type = "Nonpref Charged")
+
+avg_pref_825 <- left_join(avg_pref_charged_825, avg_pref_total_825, by = "fop") %>%
+  mutate(type = "Pref Charged")
+
+avg_tRNAfractionCharged_825 <- bind_rows(avg_nonpref_825, avg_pref_825)
+
+# Create the plot
+avg_plot_825 <- ggplot(avg_tRNAfractionCharged_825, aes(x = fop, y = avg_charged / (avg_charged + avg_total), color = type)) +
+  geom_line() +
+  geom_point() +
+  theme_minimal() +
+  labs(x = "Fraction of Optimal Codons", y = "Fraction of Charged tRNAs at 825s") +
+  scale_x_continuous(breaks = seq(1, 9, by = 1), labels = seq(0.1, 0.9, by = 0.1)) +
+  scale_color_manual(values = cbPalette)
+
+if (SAVE_FIGS) {
+  save_plot("analysis/figures/avg_tRNAfractionCharged_by_proportion_825s.pdf", avg_plot_825, base_width = 12, base_height = 16)
+}
+```

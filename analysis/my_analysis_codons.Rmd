@@ -83,22 +83,22 @@ gene_10A_data <- all_data %>%
   filter(str_detect(pinetree, "gene 10A"))
 
 # Calculate average proteins for each proportion at 420 seconds
-avg_proteins_815 <- gene_10A_data %>%
-  filter(time == 815) %>%
+avg_proteins_825 <- gene_10A_data %>%
+  filter(time == 825) %>%
   group_by(fop) %>%
   summarize(avg_protein = mean(protein), .groups = "drop")
-print(avg_proteins_815)
+print(avg_proteins_825)
 
 # Create the plot
-avg_plot_815 <- ggplot(avg_proteins_815, aes(x = fop, y = avg_protein)) +
+avg_plot_825 <- ggplot(avg_proteins_825, aes(x = fop, y = avg_protein)) +
   geom_line() +
   geom_point() +
   theme_minimal() +
-  labs(x = "Proportion", y = "Average Proteins at 815s for gene 10A") +
-  scale_x_continuous(breaks = seq(0.1, 1, by = 0.1))
+  labs(x = "Proportion", y = "Average Proteins at 825s for gene 10A") +
+  scale_x_continuous(breaks = seq(1, 9, by = 1))
 
 
 if (SAVE_FIGS) {
-  save_plot("analysis/figures/codon_avg_gene10proteins_by_proportion_815s.pdf", avg_plot_815, base_width = 12, base_height = 16)
+  save_plot("analysis/figures/codon_avg_gene10proteins_by_proportion_825s.pdf", avg_plot_825, base_width = 12, base_height = 16)
 }
 ```

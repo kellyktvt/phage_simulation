@@ -1,0 +1,43 @@
+Launcher: Setup complete.
+
+------------- SUMMARY ---------------
+   Number of hosts:    1
+   Working directory:  /work/10081/kellyktvt/ls6/phage_simulation
+   Processes per host: 128
+   Total processes:    128
+   Total jobs:         27
+   Scheduling method:  dynamic
+
+-------------------------------------
+Launcher: Starting parallel tasks...
+using /tmp/launcher.2079029.hostlist.jvoTJLut to get hosts
+starting job on c314-161
+Warning: Permanently added 'c314-161' (ECDSA) to the list of known hosts.
+Launcher: Task 26 running job 3 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 1 2)
+Launcher: Task 42 running job 6 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 1 5)
+Launcher: Task 14 running job 4 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 1 3)
+Launcher: Task 20 running job 2 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 1 1)
+Launcher: Task 4 running job 1 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 1 0)
+Launcher: Task 38 running job 5 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 1 4)
+Launcher: Task 53 running job 7 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 1 6)
+Launcher: Task 59 running job 8 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 1 5)
+Launcher: Task 69 running job 9 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 1 8)
+Launcher: Task 78 running job 10 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 2 0)
+Launcher: Task 90 running job 11 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 2 1)
+Launcher: Task 100 running job 12 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 2 2)
+Launcher: Task 114 running job 13 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 2 3)
+Launcher: Task 109 running job 14 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 2 4)
+Launcher: Task 124 running job 15 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 2 5)
+Launcher: Task 2 running job 16 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 2 6)
+Launcher: Task 13 running job 17 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 2 5)
+Launcher: Task 27 running job 18 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 2 8)
+Launcher: Task 49 running job 19 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 3 0)
+Launcher: Task 62 running job 20 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 3 1)
+Launcher: Task 57 running job 21 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 3 2)
+Launcher: Task 68 running job 22 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 3 3)
+Launcher: Task 65 running job 23 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 3 4)
+Launcher: Task 73 running job 24 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 3 5)
+Launcher: Task 92 running job 25 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 3 6)
+Launcher: Task 89 running job 26 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 3 5)
+Launcher: Task 104 running job 27 on c314-161.ls6.tacc.utexas.edu (python3 src/python/models/trna_phage_model/trna_phage_model_100.py 0.5 3 8)
+slurmstepd: error: *** JOB 2079029 ON c314-161 CANCELLED AT 2024-12-01T21:31:10 DUE TO TIME LIMIT ***

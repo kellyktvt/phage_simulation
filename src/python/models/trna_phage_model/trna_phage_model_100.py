@@ -357,7 +357,7 @@ def main():
 #--------------------------------------------------------------------------
 
     # strength of tRNA re-charging reaction [tRNA_a, tRNA_b]   
-    TRNA_CHRG_RATES = [10.0, 10.0]   # originally [100.0, 100.0]
+    TRNA_CHRG_RATES = [100.0, 100.0]   # originally [100.0, 100.0]
     
     # tRNA proportions, i.e. 10% total tRNA is pref, other 90% is nonpref
     pref_proportion = float(sys.argv[1])
@@ -371,7 +371,7 @@ def main():
     fop_val = deoptimized_index + 1
 
     # generate a unique filename based on the multiplier
-    output_dir = "/scratch/10081/kellyktvt/trna_parallel_output/charge10"
+    output_dir = "/scratch/10081/kellyktvt/trna_parallel_output/charge100"
     output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop_val}.tsv")
     
     TOTAL_TRNA = 2500 # total tRNA

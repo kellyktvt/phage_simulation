@@ -1,5 +1,5 @@
 ---
-title: "Codon Model Analysis"
+title: "Fraction of Optimal Codons x Fraction of Charged tRNAs"
 output: html_document
 ---
 
@@ -55,25 +55,28 @@ load_sim <- function(paths) {
   bind_rows(data_list)
 }
 
-# Define the output directory
-output_dir <- "data/simulation/phage/codon_parallel_output"
+# Define the output directory and max time
+output_dir <- "data/simulation/phage/codon_parallel_pref0.7_charge100"
+max_time <- 825
+
+# Extract pref_val and charge_val from the output directory string
+pref_val <- as.numeric(str_extract(output_dir, "(?<=pref)[0-9]\\.[0-9]"))
+charge_val <- as.numeric(str_extract(output_dir, "(?<=charge)[0-9]+"))
 
 # Generate file paths
 seeds <- 1:3
 fop_proportions <- 1:9
 
 file_paths <- expand.grid(seed = seeds, fop = fop_proportions) %>%
-  mutate(file_name = sprintf("trna_phage_pref0.7_%d_fop%d.tsv", seed, fop)) %>%
+  mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%d.tsv", pref_val, seed, fop)) %>%
   mutate(full_path = file.path(output_dir, file_name))
 
 # Load all simulations
 all_data <- load_sim(file_paths$full_path)
 
-# Add proportion and seed columns
+# Add fop column
 all_data <- all_data %>%
   mutate(
-    seed = as.numeric(str_extract(file, "(?<=_)0-9")),
-    proportion = as.numeric(str_extract(file, "(?<=pref)[0-9]\\.[0-9]")),
     fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+"))
   )
 
@@ -88,46 +91,46 @@ pref_charged_data <- all_data %>%
 pref_uncharged_data <- all_data %>%
   filter(str_detect(pinetree, "pref_uncharged"))
 
-# Calculate average fraction of charged tRNAs for each proportion at 825 seconds
-avg_nonpref_charged_825 <- nonpref_charged_data %>%
-  filter(time == 825) %>%
+# Calculate average fraction of charged tRNAs for each proportion at max time
+avg_nonpref_charged <- nonpref_charged_data %>%
+  filter(time == max_time) %>%
   group_by(fop) %>%
   summarize(avg_charged = mean(protein), .groups = "drop")
 
-avg_nonpref_total_825 <- nonpref_uncharged_data %>%
-  filter(time == 825) %>%
+avg_nonpref_total <- nonpref_uncharged_data %>%
+  filter(time == max_time) %>%
   group_by(fop) %>%
   summarize(avg_total = mean(protein), .groups = "drop")
 
-avg_pref_charged_825 <- pref_charged_data %>%
-  filter(time == 825) %>%
+avg_pref_charged <- pref_charged_data %>%
+  filter(time == max_time) %>%
   group_by(fop) %>%
   summarize(avg_charged = mean(protein), .groups = "drop")
 
-avg_pref_total_825 <- pref_uncharged_data %>%
-  filter(time == 825) %>%
+avg_pref_total <- pref_uncharged_data %>%
+  filter(time == max_time) %>%
   group_by(fop) %>%
   summarize(avg_total = mean(protein), .groups = "drop")
 
 # Combine the data for plotting
-avg_nonpref_825 <- left_join(avg_nonpref_charged_825, avg_nonpref_total_825, by = "fop") %>%
+avg_nonpref <- left_join(avg_nonpref_charged, avg_nonpref_total, by = "fop") %>%
   mutate(type = "Nonpref Charged")
 
-avg_pref_825 <- left_join(avg_pref_charged_825, avg_pref_total_825, by = "fop") %>%
+avg_pref <- left_join(avg_pref_charged, avg_pref_total, by = "fop") %>%
   mutate(type = "Pref Charged")
 
-avg_tRNAfractionCharged_825 <- bind_rows(avg_nonpref_825, avg_pref_825)
+avg_tRNAfractionCharged <- bind_rows(avg_nonpref, avg_pref)
 
 # Create the plot
-avg_plot_825 <- ggplot(avg_tRNAfractionCharged_825, aes(x = fop, y = avg_charged / (avg_charged + avg_total), color = type)) +
+avg_plot <- ggplot(avg_tRNAfractionCharged, aes(x = fop, y = avg_charged / (avg_charged + avg_total), color = type)) +
   geom_line() +
   geom_point() +
   theme_minimal() +
-  labs(x = "Fraction of Optimal Codons", y = "Fraction of Charged tRNAs at 825s") +
+  labs(x = "Fraction of Optimal Codons", y = paste("Fraction of Charged tRNAs at", max_time, "s"), title = paste("Fraction of Charged tRNAs at", max_time, "s for Every Fraction of Optimal Codons")) +
   scale_x_continuous(breaks = seq(1, 9, by = 1), labels = seq(0.1, 0.9, by = 0.1)) +
   scale_color_manual(values = cbPalette)
 
 if (SAVE_FIGS) {
-  save_plot("analysis/figures/avg_tRNAfractionCharged_by_proportion_825s.pdf", avg_plot_825, base_width = 12, base_height = 16)
+  save_plot(sprintf("analysis/figures/fraction_codonsXtrnas_%ds_pref%.1f_charge%d.pdf", max_time, pref_val, charge_val), avg_plot, base_width = 12, base_height = 16)
 }
 ```

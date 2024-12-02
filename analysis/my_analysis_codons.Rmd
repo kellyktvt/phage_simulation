@@ -1,5 +1,5 @@
 ---
-title: "Codon Model Analysis"
+title: "Fraction of Optimal Codons x Avg Proteins for Gene 10A"
 output: html_document
 ---
 

@@ -357,7 +357,8 @@ def main():
 #--------------------------------------------------------------------------
 
     # strength of tRNA re-charging reaction [tRNA_a, tRNA_b]   
-    TRNA_CHRG_RATES = [10.0, 10.0]   # originally [100.0, 100.0]
+    charge_rate = float(sys.argv[4])
+    TRNA_CHRG_RATES = [charge_rate, charge_rate]   # originally [100.0, 100.0]
     
     # tRNA proportions, i.e. 10% total tRNA is pref, other 90% is nonpref
     pref_proportion = float(sys.argv[1])

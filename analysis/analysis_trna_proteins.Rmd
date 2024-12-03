@@ -1,5 +1,5 @@
 ---
-title: "TRNA Model Transcript/Protein Analysis"
+title: "TRNA Protein Analysis"
 output: html_document
 ---
 

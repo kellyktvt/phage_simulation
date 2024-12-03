@@ -1,5 +1,5 @@
 ---
-title: "Fraction of Optimal Codons x Avg Proteins for Gene 10A"
+title: "Average proteins for a gene by tRNA proportion"
 output: html_document
 ---
 
@@ -52,14 +52,14 @@ load_sim <- function(paths) {
 }
 
 # Define the output directory
-output_dir <- "data/simulation/phage/codon_parallel_output"
+output_dir <- "data/simulation/phage/trna_parallel_output"
 
 # Generate file paths
+pref_proportions <- seq(0.1, 1, by = 0.1)
 seeds <- 1:3
-fop_proportions <- 1:9
 
-file_paths <- expand.grid(seed = seeds, fop = fop_proportions) %>%
-  mutate(file_name = sprintf("trna_phage_pref0.7_%d_fop%d.tsv", seed, fop)) %>%
+file_paths <- expand.grid(pref = pref_proportions, seed = seeds) %>%
+  mutate(file_name = sprintf("trna_phage_pref%.1f_%d.tsv", pref, seed)) %>%
   mutate(full_path = file.path(output_dir, file_name))
 
 # Load all simulations
@@ -68,32 +68,31 @@ all_data <- load_sim(file_paths$full_path)
 # Add proportion and seed columns
 all_data <- all_data %>%
   mutate(
-    seed = as.numeric(str_extract(file, "(?<=_)[0-9](?=_fop)")),
     proportion = as.numeric(str_extract(file, "(?<=pref)[0-9]\\.[0-9]")),
-    fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+"))
+    seed = as.numeric(str_extract(file, "(?<=_)[0-9](?=\\.tsv)"))
   )
 
 # Filter the data to include only gene 10A
 gene_10A_data <- all_data %>%
   filter(str_detect(pinetree, "gene 10A"))
 
-# Calculate average proteins for each proportion at 825 seconds
-avg_proteins_825 <- gene_10A_data %>%
-  filter(time == 825) %>%
-  group_by(fop) %>%
+# Calculate average proteins for each proportion at 420 seconds
+avg_proteins_420 <- gene_10A_data %>%
+  filter(time == 420) %>%
+  group_by(proportion) %>%
   summarize(avg_protein = mean(protein), .groups = "drop")
-print(avg_proteins_825)
+print(avg_proteins_420)
 
 # Create the plot
-avg_plot_825 <- ggplot(avg_proteins_825, aes(x = fop, y = avg_protein)) +
+avg_plot_420 <- ggplot(avg_proteins_420, aes(x = proportion, y = avg_protein)) +
   geom_line() +
   geom_point() +
   theme_minimal() +
-  labs(x = "Fraction of Optimal Codons", y = "Average Proteins at 825s for gene 10A") +
-  scale_x_continuous(breaks = seq(1, 9, by = 1), labels = seq(0.1, 0.9, by = 0.1))
+  labs(x = "Proportion", y = "Average Proteins at 420s for gene 10A") +
+  scale_x_continuous(breaks = seq(0.1, 1, by = 0.1))
 
 
 if (SAVE_FIGS) {
-  save_plot("analysis/figures/avg_gene10proteins_by_codon_proportion_825s.pdf", avg_plot_825, base_width = 12, base_height = 16)
+  save_plot("analysis/figures/gene10proteins_by_trna_proportion_420s.pdf", avg_plot_420, base_width = 12, base_height = 16)
 }
 ```

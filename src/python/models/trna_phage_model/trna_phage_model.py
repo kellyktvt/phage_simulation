@@ -371,8 +371,8 @@ def main():
     # get the fop value
     fop_val = deoptimized_index + 1
 
-    # generate a unique filename based on the multiplier
-    output_dir = "/scratch/10081/kellyktvt/trna_parallel_output/charge10"
+    # generate a unique filename based on the charge
+    output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/charge{charge_rate}"
     output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop_val}.tsv")
     
     TOTAL_TRNA = 2500 # total tRNA

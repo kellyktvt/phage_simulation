@@ -76,9 +76,20 @@ for (output_dir in output_dirs) {
   file_paths <- expand.grid(seed = seeds, fop = fop_proportions) %>%
     mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%d.tsv", pref_val, seed, fop)) %>%
     mutate(full_path = file.path(output_dir, file_name))
+
+    # Check if the files exist
+    file_exists <- file.exists(file_paths$full_path)
+
+    # Filter out non-existing files
+    existing_files <- file_paths$full_path[file_exists]
+    
+    if (length(existing_files) == 0) {
+      warning(paste("No files found for charge", charge_val))
+      next
+    }
   
   # Load all simulations
-  data <- load_sim(file_paths$full_path)
+  data <- load_sim(existing_files)
   
   # Add fop and charge columns
   data <- data %>%
@@ -134,14 +145,14 @@ avg_pref <- left_join(avg_pref_charged, avg_pref_total, by = c("fop", "charge"))
 avg_tRNAfractionCharged <- bind_rows(avg_nonpref, avg_pref)
 
 # Create the plot
-avg_plot <- ggplot(avg_tRNAfractionCharged, aes(x = fop, y = avg_charged / (avg_charged + avg_total), color = type, linetype = as.factor(charge))) +
+avg_plot <- ggplot(avg_tRNAfractionCharged, aes(x = fop, y = avg_charged / (avg_charged + avg_total), color = as.factor(charge), linetype = type)) +
   geom_line() +
   geom_point() +
   theme_minimal() +
-  labs(x = "Fraction of Optimal Codons", y = paste("Fraction of Charged tRNAs at", max_time, "s"), title = paste("Fraction of Charged tRNAs at", max_time, "s for Fractions of Optimal Codons   [ tRNA pref proportion:", pref_val, "]")) +
+  labs(x = "Fraction of Optimal Codons", y = paste("Fraction of Charged tRNAs at", max_time, "s"), title = paste("Fraction of Charged tRNAs at", max_time, "s for Fractions of Optimal Codons [ tRNA pref proportion:", pref_val, "]")) +
   scale_x_continuous(breaks = seq(1, 9, by = 1), labels = seq(0.1, 0.9, by = 0.1)) +
   scale_color_manual(values = cbPalette) +
-  scale_linetype_manual(values = c("solid", "dashed", "dotted"))
+  scale_linetype_manual(values = c("dashed", "solid"))
 
 if (SAVE_FIGS) {
   save_plot(sprintf("analysis/figures/fraction_codonsXtrnas_%ds_pref%.1f.pdf", max_time, pref_val), avg_plot, base_width = 12, base_height = 12)

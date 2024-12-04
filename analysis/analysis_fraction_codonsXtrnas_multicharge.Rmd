@@ -149,12 +149,16 @@ avg_plot <- ggplot(avg_tRNAfractionCharged, aes(x = fop, y = avg_charged / (avg_
   geom_line() +
   geom_point() +
   theme_minimal() +
-  labs(x = "Fraction of Optimal Codons", y = paste("Fraction of Charged tRNAs at", max_time, "s"), title = paste("Fraction of Charged tRNAs at", max_time, "s for Fractions of Optimal Codons [ tRNA pref proportion:", pref_val, "]")) +
+  labs(x = "Fraction of Optimal Codons", 
+    y = paste("Fraction of Charged tRNAs at", max_time, "s"), 
+    title = paste("Fraction of Charged tRNAs at", max_time, "s for Fractions of Optimal Codons\n[ tRNA pref proportion:", pref_val, "]"),
+    color = "tRNA Charge Rate",
+    linetype = "tRNA Type") +
   scale_x_continuous(breaks = seq(1, 9, by = 1), labels = seq(0.1, 0.9, by = 0.1)) +
   scale_color_manual(values = cbPalette) +
   scale_linetype_manual(values = c("dashed", "solid"))
 
 if (SAVE_FIGS) {
-  save_plot(sprintf("analysis/figures/fraction_codonsXtrnas_%ds_pref%.1f.pdf", max_time, pref_val), avg_plot, base_width = 12, base_height = 12)
+  save_plot(sprintf("analysis/figures/fraction_codonsXtrnas_%ds_pref%.1f.pdf", max_time, pref_val), avg_plot, base_width = 8, base_height = 5)
 }
 ```

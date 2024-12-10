@@ -77,7 +77,7 @@ all_data <- all_data %>%
     fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+"))
   )
 
-# Filter the data to include only gene 10A
+# Filter the data to include only the specified gene
 gene_data <- all_data %>%
   filter(str_detect(pinetree, paste("gene", gene_name)))
 

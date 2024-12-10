@@ -118,6 +118,6 @@ avg_plot <- ggplot(avg_proteins, aes(x = fop, y = avg_protein, color = gene)) +
   scale_color_manual(values = cbPalette)
 
 if (SAVE_FIGS) {
-  save_plot(sprintf("analysis/figures/avg_multigene_proteins_by_codon_proportion_%ds_pref%.1f_charge%d.pdf", max_time, pref_val, charge_val), avg_plot, base_width = 12, base_height = 12)
+  save_plot(sprintf("analysis/figures/multigene_proteins_by_codon_proportion_%ds_pref%.1f_charge%d.pdf", max_time, pref_val, charge_val), avg_plot, base_width = 12, base_height = 12)
 }
 ```

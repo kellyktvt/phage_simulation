@@ -205,7 +205,7 @@ def main():
 #-------------------------------------------------------------------------------
 
     # commenting out the use of weights allows you to run this sim on the dev version of pinetree
-    #phage.add_weights(norm_weights)
+    phage.add_weights(norm_weights)
 
 #-------------------------------------------------------------------------------
 
@@ -227,42 +227,42 @@ def main():
     sim.add_species("ecoli_genome", 0)
     sim.add_species("ecoli_transcript", 0)
 
-    # sim.add_reaction(1e6, ["ecoli_transcript", "__ribosome"], [
-    #                  "bound_ribosome"])
+    sim.add_reaction(1e6, ["ecoli_transcript", "__ribosome"], [
+                     "bound_ribosome"])
 
-    # sim.add_reaction(0.04, ["bound_ribosome"], [
-    #                  "__ribosome", "ecoli_transcript"])
+    sim.add_reaction(0.04, ["bound_ribosome"], [
+                     "__ribosome", "ecoli_transcript"])
 
-    # sim.add_reaction(0.001925, ["ecoli_transcript"], ["degraded_transcript"])
+    sim.add_reaction(0.001925, ["ecoli_transcript"], ["degraded_transcript"])
 
-    # sim.add_reaction(1e7, ["ecolipol", "ecoli_genome"], ["bound_ecolipol"])
+    sim.add_reaction(1e7, ["ecolipol", "ecoli_genome"], ["bound_ecolipol"])
 
-    # sim.add_reaction(
-    #     0.3e7, ["ecolipol-p", "ecoli_genome"], ["bound_ecolipol_p"])
+    sim.add_reaction(
+        0.3e7, ["ecolipol-p", "ecoli_genome"], ["bound_ecolipol_p"])
 
-    # sim.add_reaction(0.04, ["bound_ecolipol"], [
-    #                  "ecolipol", "ecoli_genome", "ecoli_transcript"])
+    sim.add_reaction(0.04, ["bound_ecolipol"], [
+                     "ecolipol", "ecoli_genome", "ecoli_transcript"])
 
-    # sim.add_reaction(0.04, ["bound_ecolipol_p"], [
-    #                  "ecolipol-p", "ecoli_genome", "ecoli_transcript"])
+    sim.add_reaction(0.04, ["bound_ecolipol_p"], [
+                     "ecolipol-p", "ecoli_genome", "ecoli_transcript"])
 
-    # sim.add_reaction(3.8e7, ["protein_kinase-0.7", "ecolipol"],
-    #                  ["ecolipol-p", "protein_kinase-0.7"])
+    sim.add_reaction(3.8e7, ["protein_kinase-0.7", "ecolipol"],
+                     ["ecolipol-p", "protein_kinase-0.7"])
 
-    # sim.add_reaction(3.8e7, ["protein_kinase-0.7", "ecolipol-2"],
-    #                  ["ecolipol-2-p", "protein_kinase-0.7"])
+    sim.add_reaction(3.8e7, ["protein_kinase-0.7", "ecolipol-2"],
+                     ["ecolipol-2-p", "protein_kinase-0.7"])
 
-    # sim.add_reaction(3.8e7, ["gp-2", "ecolipol"], ["ecolipol-2"])
+    sim.add_reaction(3.8e7, ["gp-2", "ecolipol"], ["ecolipol-2"])
 
-    # sim.add_reaction(3.8e7, ["gp-2", "ecolipol-p"], ["ecolipol-2-p"])
+    sim.add_reaction(3.8e7, ["gp-2", "ecolipol-p"], ["ecolipol-2-p"])
 
-    # sim.add_reaction(1.1, ["ecolipol-2-p"], ["gp-2", "ecolipol-p"])
+    sim.add_reaction(1.1, ["ecolipol-2-p"], ["gp-2", "ecolipol-p"])
 
-    # sim.add_reaction(1.1, ["ecolipol-2"], ["gp-2", "ecolipol"])
+    sim.add_reaction(1.1, ["ecolipol-2"], ["gp-2", "ecolipol"])
 
-    # sim.add_reaction(3.8e9, ["lysozyme-3.5", "rnapol-1"], ["rnapol-3.5"])
+    sim.add_reaction(3.8e9, ["lysozyme-3.5", "rnapol-1"], ["rnapol-3.5"])
 
-    # sim.add_reaction(3.5, ["rnapol-3.5"], ["lysozyme-3.5", "rnapol-1"])
+    sim.add_reaction(3.5, ["rnapol-3.5"], ["lysozyme-3.5", "rnapol-1"])
 
     sim.seed(34)
 

@@ -1,5 +1,5 @@
 ---
-title: "Average proteins for multiple genes by codon proportion"
+title: "Fraction of Optimal Codons x Protein Abundance - Multiple Genes"
 output: html_document
 ---
 
@@ -70,10 +70,11 @@ file_paths <- expand.grid(seed = seeds, fop = fop_proportions) %>%
 # Load all simulations
 all_data <- load_sim(file_paths$full_path)
 
-# Add fop column
-all_data <- all_data %>%
+# Add seed, fop columns
+data <- data %>%
   mutate(
-    fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+"))
+    seed = as.numeric(str_extract(file, "(?<=_)[0-9]+(?=_fop)")),
+    fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+")),
   )
 
 # Filter the data to get data for gene 9, 10A, and 11

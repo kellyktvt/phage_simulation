@@ -71,65 +71,55 @@ file_paths <- expand.grid(seed = seeds, fop = fop_proportions) %>%
   mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%d.tsv", pref_val, seed, fop)) %>%
   mutate(full_path = file.path(output_dir, file_name))
 
-# Print the file paths to check if they are correct
-print(file_paths$full_path)
-
 # Check if the files exist
 file_exists <- file.exists(file_paths$full_path)
-print(file_exists)
 
 # Load all simulations
 all_data <- load_sim(file_paths$full_path)
 
-# Add fop column
-all_data <- all_data %>%
+# Add seed, fop columns
+data <- data %>%
   mutate(
+    seed = as.numeric(str_extract(file, "(?<=_)[0-9]+(?=_fop)")),
     fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+"))
   )
 
-# Filter the data 
+# Filter the data to include only the trnas at the max time
 nonpref_charged_data <- all_data %>%
-  filter(str_detect(pinetree, "nonpref_charged"))
+  filter(str_detect(pinetree, "nonpref_charged") & time == max_time)
 nonpref_uncharged_data <- all_data %>%
-  filter(str_detect(pinetree, "nonpref_uncharged"))
+  filter(str_detect(pinetree, "nonpref_uncharged") & time == max_time)
 
 pref_charged_data <- all_data %>%
-  filter(str_detect(pinetree, "pref_charged"))
+  filter(str_detect(pinetree, "pref_charged") & !str_detect(pinetree, "nonpref_charged") & time == max_time)
 pref_uncharged_data <- all_data %>%
-  filter(str_detect(pinetree, "pref_uncharged"))
+  filter(str_detect(pinetree, "pref_uncharged") & !str_detect(pinetree, "nonpref_uncharged") & time == max_time)
+
+# Calculate fraction of charged tRNAs for each seed at max time
+nonpref_fraction <- nonpref_charged_data %>%
+  group_by(fop, charge, seed) %>%
+  summarize(fraction_charged = (protein / (protein + nonpref_uncharged_data$protein[nonpref_uncharged_data$seed == seed & nonpref_uncharged_data$fop == fop & nonpref_uncharged_data$charge == charge])), .groups = "drop")
+
+pref_fraction <- pref_charged_data %>%
+  group_by(fop, charge, seed) %>%
+  summarize(fraction_charged = (protein / (protein + nonpref_uncharged_data$protein[nonpref_uncharged_data$seed == seed & nonpref_uncharged_data$fop == fop & nonpref_uncharged_data$charge == charge])), .groups = "drop")
 
 # Calculate average fraction of charged tRNAs for each proportion at max time
-avg_nonpref_charged <- nonpref_charged_data %>%
-  filter(time == max_time) %>%
-  group_by(fop) %>%
-  summarize(avg_charged = mean(protein), .groups = "drop")
-
-avg_nonpref_total <- nonpref_uncharged_data %>%
-  filter(time == max_time) %>%
-  group_by(fop) %>%
-  summarize(avg_total = mean(protein), .groups = "drop")
-
-avg_pref_charged <- pref_charged_data %>%
-  filter(time == max_time) %>%
-  group_by(fop) %>%
-  summarize(avg_charged = mean(protein), .groups = "drop")
-
-avg_pref_total <- pref_uncharged_data %>%
-  filter(time == max_time) %>%
-  group_by(fop) %>%
-  summarize(avg_total = mean(protein), .groups = "drop")
-
-# Combine the data for plotting
-avg_nonpref <- left_join(avg_nonpref_charged, avg_nonpref_total, by = "fop") %>%
+avg_nonpref_fraction <- nonpref_fraction %>%
+  group_by(fop, charge) %>%
+  summarize(avg_fraction_charged = mean(fraction_charged), .groups = "drop") %>%
   mutate(type = "Nonpref Charged")
 
-avg_pref <- left_join(avg_pref_charged, avg_pref_total, by = "fop") %>%
+avg_pref_fraction <- pref_fraction %>%
+  group_by(fop, charge) %>%
+  summarize(avg_fraction_charged = mean(fraction_charged), .groups = "drop") %>%
   mutate(type = "Pref Charged")
 
-avg_tRNAfractionCharged <- bind_rows(avg_nonpref, avg_pref)
+# Combine the data for plotting
+avg_tRNAfractionCharged <- bind_rows(avg_nonpref_fraction, avg_pref_fraction)
 
 # Create the plot
-avg_plot <- ggplot(avg_tRNAfractionCharged, aes(x = fop, y = avg_charged / (avg_charged + avg_total), color = type)) +
+avg_plot <- ggplot(avg_tRNAfractionCharged, aes(x = fop, y = avg_fraction_charged), color = type) +
   geom_line() +
   geom_point() +
   theme_minimal() +

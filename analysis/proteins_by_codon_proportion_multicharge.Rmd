@@ -1,5 +1,5 @@
 ---
-title: "Fraction of Optimal Codons x Fraction of Charged tRNAs"
+title: "Fraction of Optimal Codons x Protein Abundance - Multiple Charge Rates"
 output: html_document
 ---
 
@@ -46,20 +46,17 @@ load_sim <- function(paths) {
       mutate(time = round(time)) %>%
       mutate(protein = if_else(is.na(protein), 0, protein),
              transcript = if_else(is.na(transcript), 0, transcript)) %>%
-      filter(
-        !(pinetree %in% IGNORE_GENES),
-        (!is.na(gene_number) | 
-         str_detect(pinetree, "nonpref_charged|nonpref_uncharged|pref_charged|pref_uncharged"))
-      )
+      filter(!(pinetree %in% IGNORE_GENES), !is.na(gene_number))
   })
   bind_rows(data_list)
 }
 
-# Define the output directories and max time
+# Define the output directories, max time, and gene
 output_dirs <- c("data/simulation/phage/codon_parallel_pref0.5_charge100",
                  "data/simulation/phage/codon_parallel_pref0.5_charge10",
                  "data/simulation/phage/codon_parallel_pref0.5_charge50")
 max_time <- 870
+gene_name <- "10A"
 
 # Extract pref_val and charge_val from the output directory string
 pref_val <- as.numeric(str_extract(output_dirs[1], "(?<=pref)[0-9]\\.[0-9]"))
@@ -91,74 +88,42 @@ for (output_dir in output_dirs) {
   # Load all simulations
   data <- load_sim(existing_files)
   
-  # Add fop and charge columns
+  # Add seed, fop, charge columns
   data <- data %>%
     mutate(
+      seed = as.numeric(str_extract(file, "(?<=_)[0-9]+(?=_fop)")),
       fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+")),
       charge = charge_val
     )
-  
+
   all_data[[as.character(charge_val)]] <- data
 }
 
 all_data <- bind_rows(all_data)
 
-# Filter the data 
-nonpref_charged_data <- all_data %>%
-  filter(str_detect(pinetree, "nonpref_charged"))
-nonpref_uncharged_data <- all_data %>%
-  filter(str_detect(pinetree, "nonpref_uncharged"))
+# Filter the data to include only the specified gene
+gene_data <- all_data %>%
+  filter(str_detect(pinetree, paste("gene", gene_name)))
 
-pref_charged_data <- all_data %>%
-  filter(str_detect(pinetree, "pref_charged"))
-pref_uncharged_data <- all_data %>%
-  filter(str_detect(pinetree, "pref_uncharged"))
-
-# Calculate average fraction of charged tRNAs for each proportion at max time
-avg_nonpref_charged <- nonpref_charged_data %>%
+# Calculate average proteins for each proportion at max time
+avg_proteins <- gene_data %>%
   filter(time == max_time) %>%
   group_by(fop, charge) %>%
-  summarize(avg_charged = mean(protein), .groups = "drop")
-
-avg_nonpref_total <- nonpref_uncharged_data %>%
-  filter(time == max_time) %>%
-  group_by(fop, charge) %>%
-  summarize(avg_total = mean(protein), .groups = "drop")
-
-avg_pref_charged <- pref_charged_data %>%
-  filter(time == max_time) %>%
-  group_by(fop, charge) %>%
-  summarize(avg_charged = mean(protein), .groups = "drop")
-
-avg_pref_total <- pref_uncharged_data %>%
-  filter(time == max_time) %>%
-  group_by(fop, charge) %>%
-  summarize(avg_total = mean(protein), .groups = "drop")
-
-# Combine the data for plotting
-avg_nonpref <- left_join(avg_nonpref_charged, avg_nonpref_total, by = c("fop", "charge")) %>%
-  mutate(type = "Nonpref Charged")
-
-avg_pref <- left_join(avg_pref_charged, avg_pref_total, by = c("fop", "charge")) %>%
-  mutate(type = "Pref Charged")
-
-avg_tRNAfractionCharged <- bind_rows(avg_nonpref, avg_pref)
+  summarize(avg_protein = mean(protein), .groups = "drop")
 
 # Create the plot
-avg_plot <- ggplot(avg_tRNAfractionCharged, aes(x = fop, y = avg_charged / (avg_charged + avg_total), color = as.factor(charge), linetype = type)) +
+avg_plot <- ggplot(avg_proteins, aes(x = fop, y = avg_protein, color = as.factor(charge))) +
   geom_line() +
   geom_point() +
   theme_minimal() +
   labs(x = "Fraction of Optimal Codons", 
-    y = paste("Fraction of Charged tRNAs at", max_time, "s"), 
-    title = paste("Fraction of Charged tRNAs at", max_time, "s for Fractions of Optimal Codons\n[ tRNA pref proportion:", pref_val, "]"),
-    color = "tRNA Charge Rate",
-    linetype = "tRNA Type") +
+    y = paste("Protein Abundance at", max_time, "s for gene", gene_name), 
+    title = paste("Protein Abundance at", max_time, "s for gene", gene_name, "\nfor Fractions of Optimal Codons   [ tRNA pref proportion:", pref_val, "]"),
+    color = "tRNA Charge Rate") +
   scale_x_continuous(breaks = seq(1, 9, by = 1), labels = seq(0.1, 0.9, by = 0.1)) +
-  scale_color_manual(values = cbPalette) +
-  scale_linetype_manual(values = c("dashed", "solid"))
+  scale_color_manual(values = cbPalette) 
 
 if (SAVE_FIGS) {
-  save_plot(sprintf("analysis/figures/fraction_codonsXtrnas_%ds_pref%.1f.pdf", max_time, pref_val), avg_plot, base_width = 8, base_height = 5)
+  save_plot(sprintf("analysis/figures/gene%sproteins_by_codon_proportion_%ds_pref%.1f.pdf", gene_name, max_time, pref_val), avg_plot, base_width = 6, base_height = 6)
 }
 ```

@@ -1,5 +1,5 @@
 ---
-title: "Average proteins for a gene by codon proportion"
+title: "Fraction of Optimal Codons x Protein Abundance - Multiple Fractions of Preferred tRNAs"
 output: html_document
 ---
 
@@ -51,32 +51,35 @@ load_sim <- function(paths) {
   bind_rows(data_list)
 }
 
-# Define the output directory
-output_dir <- "data/simulation/phage/codon_parallel_pref0.7_charge100"
+# Define the output directories, max time, and gene
+output_dirs <- c("data/simulation/phage/codon_parallel_pref0.7_charge10",
+                 "data/simulation/phage/codon_parallel_pref0.5_charge10")
 max_time <- 825
-gene_name <- "11"
+gene_name <- "10A"
 
 # Extract pref_val and charge_val from the output directory string
-pref_val <- as.numeric(str_extract(output_dir, "(?<=pref)[0-9]\\.[0-9]"))
-charge_val <- as.numeric(str_extract(output_dir, "(?<=charge)[0-9]+"))
+pref_vals <- as.numeric(str_extract(output_dirs, "(?<=pref)[0-9]\\.[0-9]"))
+charge_val <- as.numeric(str_extract(output_dirs[1], "(?<=charge)[0-9]+"))
 
 # Generate file paths
 seeds <- 1:3
 fop_proportions <- 1:9
 
-file_paths <- expand.grid(seed = seeds, fop = fop_proportions) %>%
+file_paths <- expand.grid(seed = seeds, fop = fop_proportions, pref_val = pref_vals) %>%
+  mutate(output_dir = ifelse(pref_val == 0.7, output_dirs[1], output_dirs[2])) %>%
   mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%d.tsv", pref_val, seed, fop)) %>%
   mutate(full_path = file.path(output_dir, file_name))
 
 # Load all simulations
 all_data <- load_sim(file_paths$full_path)
 
-# Add seed, fop columns
-  data <- data %>%
-    mutate(
-      seed = as.numeric(str_extract(file, "(?<=_)[0-9]+(?=_fop)")),
-      fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+")),
-    )
+# Add seed, fop, pref columns
+all_data <- all_data %>%
+  mutate(
+    seed = as.numeric(str_extract(file, "(?<=_)[0-9]+(?=_fop)")),
+    fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+")),
+    pref = as.numeric(str_extract(file, "(?<=pref)[0-9]\\.[0-9]"))
+  )
 
 # Filter the data to include only the specified gene
 gene_data <- all_data %>%
@@ -85,21 +88,22 @@ gene_data <- all_data %>%
 # Calculate average proteins for each proportion at max time
 avg_proteins <- gene_data %>%
   filter(time == max_time) %>%
-  group_by(fop) %>%
+  group_by(fop, pref) %>%
   summarize(avg_protein = mean(protein), .groups = "drop")
 print(avg_proteins)
 
 # Create the plot
-avg_plot <- ggplot(avg_proteins, aes(x = fop, y = avg_protein)) +
+avg_plot <- ggplot(avg_proteins, aes(x = fop, y = avg_protein, color = as.factor(pref))) +
   geom_line() +
   geom_point() +
   theme_minimal() +
   labs(x = "Fraction of Optimal Codons", 
-    y = paste("Average Proteins at", max_time, "s for gene", gene_name), 
-    title = paste("Average Proteins at", max_time, "s for gene", gene_name, "for Fractions of Optimal Codons   [ tRNA pref proportion:", pref_val, "& charge rate:", charge_val,"]")) +
+    y = paste("Protein Abundance at", max_time, "s for gene", gene_name), 
+    title = paste("Protein Abundance at", max_time, "s for gene", gene_name, "\nfor Fractions of Optimal Codons   [ tRNA charge rate:", charge_val,"]"),
+    color = "Fraction of Preferred tRNAs") +
   scale_x_continuous(breaks = seq(1, 9, by = 1), labels = seq(0.1, 0.9, by = 0.1))
 
 if (SAVE_FIGS) {
-  save_plot(sprintf("analysis/figures/avg_gene%sproteins_by_codon_proportion_%ds_pref%.1f_charge%d.pdf", gene_name, max_time, pref_val, charge_val), avg_plot, base_width = 12, base_height = 12)
+  save_plot(sprintf("analysis/figures/gene%sproteins_by_codon_proportion_%ds_multipref_charge%d.pdf", gene_name, max_time, charge_val), avg_plot, base_width = 6, base_height = 6)
 }
 ```

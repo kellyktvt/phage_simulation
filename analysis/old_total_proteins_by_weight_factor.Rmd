@@ -1,5 +1,5 @@
 ---
-title: "Old Model - Protein Abundance by Weight Multiplier"
+title: "Old Model - Total Protein Abundance by Weight Factor"
 output: html_document
 ---
 
@@ -69,24 +69,26 @@ sim_data <- lapply(multipliers, function(m) {
 sim_data <- bind_rows(sim_data)
 
 max_time <- 1000
-gene_name <- "10A"
 
 # Filter and select relevant data
 sims <- sim_data |>
-  filter(time == max_time, gene_number == gene_name) |>
-  select(multiplier, protein)
+  filter(time == max_time) |>
+  select(multiplier, protein) |>
+  group_by(multiplier) |>
+  summarize(protein = sum(protein))
+sims
 
 # Create the plot
 plot <- ggplot(sims, aes(x = multiplier, y = protein)) +
   geom_line() +
   geom_point()+
   theme_minimal() +
-  labs(x = "Weight Multiplier", 
-    y = paste("Protein Abundance at", max_time, "s for Gene", gene_name), 
-    title = paste("Protein Abundance at", max_time, "s for Gene", gene_name, "\nfor Fractions of Optimal Codons   [ Using the Old Model ]")) +
+  labs(x = "Weight Factor", 
+    y = paste("Total Protein Abundance at", max_time, "s"), 
+    title = paste("Total Protein Abundance at", max_time, "s\nfor Fractions of Optimal Codons   [ Using the Old Model ]")) +
   scale_x_continuous(breaks = seq(0.1, 1.0, by = 0.1), labels = seq(0.1, 1.0, by = 0.1))
 
 if (SAVE_FIGS) {
-  save_plot(sprintf("analysis/figures/old_gene%sproteins_by_weight_multiplier_%ds.pdf", gene_name, max_time), plot, base_width = 6, base_height = 6)
+  save_plot(sprintf("analysis/figures/old_total_proteins_by_weight_factor_%ds.pdf", max_time), plot, base_width = 6, base_height = 6)
 }
 ```

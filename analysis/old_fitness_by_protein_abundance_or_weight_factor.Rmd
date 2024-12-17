@@ -115,7 +115,7 @@ plot <- ggplot(sims, aes(x = multiplier, y = fitness)) +
   geom_point(shape = 21, fill = "lightgray", color = "black", size = 7)+
   scale_x_reverse() +
   geom_smooth(method = "lm", se = FALSE, color = "black", size = 0.5) +
-  labs(x = "Weight Multiplier", y = "Fitness (doublings per hour)", title = "Fitness of Gene 10A Recoded") +
+  labs(x = "Weight Factor", y = "Fitness (doublings per hour)", title = "Fitness of Gene 10A Recoded") +
   theme_minimal()
 
 print(plot)

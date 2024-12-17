@@ -1,5 +1,6 @@
 from Bio import Entrez, SeqIO
 import pinetree as pt
+import sys
 
 CELL_VOLUME = 1.1e-15
 PHI10_BIND = 1.82e7  # Binding constant for phi10
@@ -149,6 +150,9 @@ def normalize_weights(weights):
 
 
 def main():
+    # Retrieve the weight factor
+    factor = float(sys.argv[1])
+
     sim = pt.Model(cell_volume=CELL_VOLUME)
 
     # Download T7 wild-type genbank records
@@ -195,7 +199,7 @@ def main():
             phage.add_gene(name=name, start=start, stop=stop,
                            rbs_start=start - 30, rbs_stop=start, rbs_strength=1e7)
         if feature.type == "CDS":
-            weights = compute_cds_weights(record, feature, 1.0, weights)
+            weights = compute_cds_weights(record, feature, factor, weights)
 
     mask_interactions = ["rnapol-1", "rnapol-3.5",
                          "ecolipol", "ecolipol-p", "ecolipol-2", "ecolipol-2-p"]
@@ -266,8 +270,12 @@ def main():
 
     sim.seed(34)
 
+    # generate a unique filename based on the charge
+    output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/old_model"
+    output_filename = os.path.join(output_dir, f"output_{factor:.1f}.tsv")
+
     sim.simulate(time_limit=1200, time_step=5,
-                 output="phage_wildtype.tsv")
+                 output=output_filename)
 
 
 if __name__ == "__main__":

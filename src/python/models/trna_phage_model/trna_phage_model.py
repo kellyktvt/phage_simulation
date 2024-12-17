@@ -229,7 +229,8 @@ def main():
     deoptimized_index = int(sys.argv[3])
 
     # Read the deoptimized sequences from the FASTA file
-    deoptimized_sequences = list(SeqIO.parse("src/python/models/trna_phage_model/gene_10A_deoptimized.fasta", "fasta"))
+    # deoptimized_sequences = list(SeqIO.parse("src/python/models/trna_phage_model/gene_10A_deoptimized.fasta", "fasta"))
+    deoptimized_sequences = list(SeqIO.parse("src/python/models/trna_phage_model/gene_10A_deoptimized_extend.fasta", "fasta"))
     print(deoptimized_sequences)
 
     if deoptimized_index < len(deoptimized_sequences):
@@ -369,7 +370,8 @@ def main():
     seed_val = int(sys.argv[2])
 
     # get the fop value
-    fop_val = deoptimized_index + 1
+    # fop_val = deoptimized_index + 1
+    fop_val = deoptimized_index
 
     # generate a unique filename based on the charge
     output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/charge{charge_rate}"

@@ -3,6 +3,7 @@ from Bio import Entrez, SeqIO
 from Bio.SeqRecord import SeqRecord
 import time
 import urllib.error
+from codon_tools import FopScorer
 
 def fetch_genbank_record():
     for attempt in range(5):
@@ -40,7 +41,7 @@ def main():
     Entrez.email = "kelly.to@utexas.edu"
     
     # Process the CSV file to get gene names from the 'pinetree' column
-    genes = process_id_map("id_map.csv")
+    genes = process_id_map("output/id_map.csv")
 
     # Fetch the GenBank record for T7 wild-type 
     record = fetch_genbank_record()
@@ -51,15 +52,26 @@ def main():
         # Extract the gene sequence 
         gene_sequence = extract_gene_sequence(record, gene_name)
 
-        # Append gene sequence to the FASTA file
-        all_sequences.append(gene_sequence)
+        # Debugging: Print gene name and sequence length
+        if gene_sequence is None:
+            print(f"Warning: No sequence found for gene {gene_name}")
+        else:
+            print(f"{gene_name}: sequence length {len(gene_sequence)}")
+
+            # Get Fop score
+            score = 0
+            if len(gene_sequence) % 3 == 0:
+                scorer = FopScorer()
+                score = scorer.score(gene_sequence)        
+
+            gene_record = SeqRecord(gene_sequence, id=gene_name, description="- Fop score = %f" % score)
+            # Append gene sequence to the FASTA file
+            all_sequences.append(gene_record)
 
     # Save all sequences to a single FASTA file
-    with open("all_id_map_sequences.fasta", "w") as fasta_file:
+    with open("src/python/models/trna_phage_model/id_map_sequences.fasta", "w") as fasta_file:
         for i, sequence in enumerate(all_sequences):
-            gene_name = genes[i]
-            gene_record = SeqRecord(sequence, id=gene_name, description=f"{gene_name} sequence")
-            SeqIO.write(gene_record, fasta_file, "fasta")
+            SeqIO.write(sequence, fasta_file, "fasta")
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,15 @@
+nohup python3 phage_model_recoded.py 0.001 > output_0.001.log 2>&1
+nohup python3 phage_model_recoded.py 0.01 > output_0.01.log 2>&1
+nohup python3 phage_model_recoded.py 0.1 > output_0.1.log 2>&1
+nohup python3 phage_model_recoded.py 0.2 > output_0.2.log 2>&1
+nohup python3 phage_model_recoded.py 0.3 > output_0.3.log 2>&1
+nohup python3 phage_model_recoded.py 0.4 > output_0.4.log 2>&1
+nohup python3 phage_model_recoded.py 0.5 > output_0.5.log 2>&1
+nohup python3 phage_model_recoded.py 0.6 > output_0.6.log 2>&1
+nohup python3 phage_model_recoded.py 0.7 > output_0.7.log 2>&1
+nohup python3 phage_model_recoded.py 0.8 > output_0.8.log 2>&1
+nohup python3 phage_model_recoded.py 0.9 > output_0.9.log 2>&1
+nohup python3 phage_model_recoded.py 1.0 > output_1.0.log 2>&1
+nohup python3 phage_model_recoded.py 10 > output_10.log 2>&1
+nohup python3 phage_model_recoded.py 100 > output_100.log 2>&1
+

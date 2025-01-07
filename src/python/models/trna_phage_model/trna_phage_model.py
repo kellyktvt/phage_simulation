@@ -3,8 +3,7 @@ from Bio.SeqRecord import SeqRecord
 import pinetree as pt
 import time
 import urllib.error
-import sys
-import os
+import csv
 
 CELL_VOLUME = 1.1e-15
 PHI10_BIND = 1.82e7  # Binding constant for phi10
@@ -184,6 +183,7 @@ def tRNA_map_maker():
                 tRNA_map[codon] = ["nonpref"]
 
     return tRNA_map
+
     
 def main():
     sim = pt.Model(cell_volume=CELL_VOLUME)
@@ -360,7 +360,7 @@ def main():
     # strength of tRNA re-charging reaction [tRNA_a, tRNA_b]   
     charge_rate = float(sys.argv[4])
     TRNA_CHRG_RATES = [charge_rate, charge_rate]   # originally [100.0, 100.0]
-    
+
     # tRNA proportions, i.e. 10% total tRNA is pref, other 90% is nonpref
     pref_proportion = float(sys.argv[1])
     nonpref_proportion = 1 - pref_proportion
@@ -376,7 +376,7 @@ def main():
     # generate a unique filename based on the charge
     output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/charge{charge_rate}"
     output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop_val}.tsv")
-    
+
     TOTAL_TRNA = 2500 # total tRNA
 
     # tRNA/codon mapping: 

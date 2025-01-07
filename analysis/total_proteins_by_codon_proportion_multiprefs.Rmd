@@ -62,7 +62,7 @@ charge_val <- as.numeric(str_extract(output_dirs[1], "(?<=charge)[0-9]+"))
 
 # Generate file paths for each charge rate
 seeds <- 1:3
-fop_proportions <- 1:9
+fop_proportions <- 0:10
 
 file_paths <- expand.grid(seed = seeds, fop = fop_proportions, pref_val = pref_vals) %>%
   mutate(output_dir = ifelse(pref_val == 0.7, output_dirs[1], output_dirs[2])) %>%
@@ -101,7 +101,7 @@ total_plot <- ggplot(avg_total_proteins, aes(x = fop, y = avg_total_protein, col
     y = paste("Total Protein Abundance at", max_time, "s"), 
     title = paste("Total Protein Abundance at", max_time, "s\nfor Fractions of Optimal Codons   [ tRNA Charge Rate:", charge_val, "]"),
     color = "Fraction of Preferred tRNAs") +
-  scale_x_continuous(breaks = seq(1, 9, by = 1), labels = seq(0.1, 0.9, by = 0.1)) +
+  scale_x_continuous(breaks = seq(0, 10, by = 1), labels = seq(0, 1, by = 0.1)) +
   scale_color_manual(values = cbPalette) 
 
 if (SAVE_FIGS) {

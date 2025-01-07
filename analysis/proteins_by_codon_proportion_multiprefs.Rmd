@@ -63,7 +63,7 @@ charge_val <- as.numeric(str_extract(output_dirs[1], "(?<=charge)[0-9]+"))
 
 # Generate file paths
 seeds <- 1:3
-fop_proportions <- 1:9
+fop_proportions <- 0:10
 
 file_paths <- expand.grid(seed = seeds, fop = fop_proportions, pref_val = pref_vals) %>%
   mutate(output_dir = ifelse(pref_val == 0.7, output_dirs[1], output_dirs[2])) %>%
@@ -101,7 +101,7 @@ avg_plot <- ggplot(avg_proteins, aes(x = fop, y = avg_protein, color = as.factor
     y = paste("Protein Abundance at", max_time, "s for gene", gene_name), 
     title = paste("Protein Abundance at", max_time, "s for gene", gene_name, "\nfor Fractions of Optimal Codons   [ tRNA charge rate:", charge_val,"]"),
     color = "Fraction of Preferred tRNAs") +
-  scale_x_continuous(breaks = seq(1, 9, by = 1), labels = seq(0.1, 0.9, by = 0.1))
+  scale_x_continuous(breaks = seq(0, 10, by = 1), labels = seq(0, 1, by = 0.1))
 
 if (SAVE_FIGS) {
   save_plot(sprintf("analysis/figures/gene%sproteins_by_codon_proportion_%ds_multipref_charge%d.pdf", gene_name, max_time, charge_val), avg_plot, base_width = 6, base_height = 6)

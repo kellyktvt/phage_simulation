@@ -1,6 +1,10 @@
 from Bio import Entrez, SeqIO
 import pinetree as pt
+import time
+import urllib.error
 import sys
+import os
+
 
 CELL_VOLUME = 1.1e-15
 PHI10_BIND = 1.82e7  # Binding constant for phi10
@@ -12,8 +16,6 @@ IGNORE_REGULATORY = ["E. coli promoter E[6]",
 
 IGNORE_GENES = ["gene 10B",
                 "possible gene 5.5-5.7",
-                "gene 1.5",
-                "gene 1.6",
                 "gene 4.1",
                 "gene 4B",
                 "gene 0.6A",
@@ -26,25 +28,6 @@ RELABEL_GENES = {"gene 2": "gp-2",
                  "gene 1": "rnapol-1",
                  "gene 3.5": "lysozyme-3.5",
                  "gene 0.7": "protein_kinase-0.7"}
-
-# Optimal E. coli codons
-OPT_CODONS_E_COLI = {'A': ['GCT'],
-                     'R': ['CGT', 'CGC'],
-                     'N': ['AAC'],
-                     'D': ['GAC'],
-                     'C': ['TGC'],
-                     'Q': ['CAG'],
-                     'E': ['GAA'],
-                     'G': ['GGT', 'GGC'],
-                     'H': ['CAC'],
-                     'I': ['ATC'],
-                     'L': ['CTG'],
-                     'F': ['TTC'],
-                     'P': ['CCG'],
-                     'S': ['TCT', 'TCC'],
-                     'T': ['ACT', 'ACC'],
-                     'Y': ['TAC'],
-                     'V': ['GTT', 'GTA']}
 
 
 def get_promoter_interactions(name):
@@ -118,53 +101,32 @@ def get_terminator_interactions(name):
         return {'name': 0.0}
 
 
-def compute_cds_weights(record, feature, factor, weights):
-    # Grab the gene name
-    nuc_seq = feature.location.extract(record).seq
-    aa_seq = feature.qualifiers["translation"][0]
-    weight_sum = 0
-    for index, nuc in enumerate(nuc_seq):
-        aa_index = int(index / 3)
-        codon_start = aa_index * 3
-        codon = nuc_seq[codon_start:codon_start + 3]
-        genome_index = feature.location.start + index
-        if aa_index < len(aa_seq):
-            if aa_seq[aa_index] in OPT_CODONS_E_COLI:
-                if codon in OPT_CODONS_E_COLI[aa_seq[aa_index]]:
-                    weights[genome_index] = factor
-                    weight_sum += factor
-                else:
-                    weights[genome_index] = 1
-                    weight_sum += 1
-    return weights
-
-
-def normalize_weights(weights):
-    # Average over all CDSs, which will have non-zero weights
-    non_zero = sum(1 if i != 0 else 0.0 for i in weights)
-    mean_weight = sum(weights) / non_zero
-    norm_weights = [i / mean_weight for i in weights]
-    # Replace non-CDS weights with 1
-    norm_weights = [1 if i == 0 else i for i in norm_weights]
-    return norm_weights
-
-
 def main():
+    # Retrieve the weight factor
+    factor = float(sys.argv[1])
+
     sim = pt.Model(cell_volume=CELL_VOLUME)
+    Entrez.email = "kelly.to@utexas.edu"
 
     # Download T7 wild-type genbank records
-    Entrez.email = "benjamin.r.jack@gmail.com"
-    handle = Entrez.efetch(db="nuccore",
-                           id=["NC_001604"],
-                           rettype="gb",
-                           retmode="text")
-
-    record = SeqIO.read(handle, "genbank")
+    record = None
+    for attempt in range(10):
+        try:
+            handle = Entrez.efetch(db="nuccore", id=["NC_001604"], rettype="gb", retmode="text")
+            record = SeqIO.read(handle, "genbank")
+            break
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                time.sleep(2 ** attempt)  # Exponential backoff
+                print(f"Rate limit exceeded. Retrying...")
+            else:
+                print(f"Failed to fetch GenBank record: {e}")
+                break
     genome_length = len(record.seq)
     phage = pt.Genome(name="phage", length=genome_length)
 
     for feature in record.features:
-        weights = [0.0] * len(record.seq)
+        weights = [1.0] * len(record.seq)
         # Convert to inclusive genomic coordinates
         start = feature.location.start + 1
         stop = feature.location.end
@@ -193,22 +155,23 @@ def main():
             if name in RELABEL_GENES:
                 name = RELABEL_GENES[name]
             # Construct CDS parameters for this gene
+            # print(name)
             phage.add_gene(name=name, start=start, stop=stop,
                            rbs_start=start - 30, rbs_stop=start, rbs_strength=1e7)
-        if feature.type == "CDS":
-            weights = compute_cds_weights(record, feature, 1.0, weights)
+        # Recode gene 10A
+        if name == "gene 10A":
+            gene10_start = start
+            gene10_stop = stop
+
+    weights[gene10_start:gene10_stop] = [factor] * (gene10_stop - gene10_start)
+
+    # print([0.1] * (gene10_stop - gene10_start))
 
     mask_interactions = ["rnapol-1", "rnapol-3.5",
                          "ecolipol", "ecolipol-p", "ecolipol-2", "ecolipol-2-p"]
     phage.add_mask(500, mask_interactions)
 
-    norm_weights = normalize_weights(weights)
-#-------------------------------------------------------------------------------
-
-    # commenting out the use of weights allows you to run this sim on the dev version of pinetree
-    phage.add_weights(norm_weights)
-
-#-------------------------------------------------------------------------------
+    phage.add_weights(weights)
 
     sim.register_genome(phage)
 
@@ -267,9 +230,11 @@ def main():
 
     sim.seed(34)
 
-    sim.simulate(time_limit=1200, time_step=5,
-                 output="/data/simulation/phage/phage_model.tsv")
+    # generate a unique filename based on the charge
+    # output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/old_model"
 
+    sim.simulate(time_limit=1200, time_step=5,
+                 output=f"output_{factor:.2f}.tsv")
 
 if __name__ == "__main__":
     main()

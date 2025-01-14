@@ -3,7 +3,8 @@ from Bio.SeqRecord import SeqRecord
 import pinetree as pt
 import time
 import urllib.error
-import csv
+import random
+import sys
 
 CELL_VOLUME = 1.1e-15
 PHI10_BIND = 1.82e7  # Binding constant for phi10
@@ -126,8 +127,7 @@ def compute_cds_weights(record, feature, opt_factor, nonopt_factor, weights):
     nuc_seq = feature.location.extract(record).seq
     # Extract translated amino acid sequence
     aa_seq = feature.qualifiers["translation"][0]
-    # Initialize weight_sum 
-    weight_sum = 0
+    
     # Iterate over nucleotide sequence
     for index, nuc in enumerate(nuc_seq):
         # Calculate amino acid index (Divide nucleotide index by 3 since an amino acid is 3 nucleotides aka 1 codon)
@@ -138,17 +138,14 @@ def compute_cds_weights(record, feature, opt_factor, nonopt_factor, weights):
         codon = nuc_seq[codon_start:codon_start + 3]
         # Calculate genome index of nucleotide, accounting feature's location
         genome_index = feature.location.start + index
+
         # Check if amino acid seq is long enough to have an amino acid at the current index
         if aa_index < len(aa_seq):
             # Check if amino acid at current index has optimal codons
-            if aa_seq[aa_index] in OPT_CODONS_E_COLI:
-                # Check if codon is optimal
-                if codon in OPT_CODONS_E_COLI[aa_seq[aa_index]]:
-                    weights[genome_index] = opt_factor
-                    weight_sum += opt_factor
-                else:
-                    weights[genome_index] = nonopt_factor
-                    weight_sum += nonopt_factor
+            if aa_seq[aa_index] in OPT_CODONS_E_COLI and codon in OPT_CODONS_E_COLI[aa_seq[aa_index]]:
+                weights[genome_index] = opt_factor
+            else:
+                weights[genome_index] = nonopt_factor
     return weights
 
 
@@ -194,9 +191,43 @@ def tRNA_map_maker():
 
     return tRNA_map
 
-def randomize_codons(record, seq):
+def randomize_codons(record, feature, opt_percent):
     # Extract nucleotide sequence
     nuc_seq = feature.location.extract(record).seq
+
+    # Split the sequence into codons
+    codons = [str(nuc_seq[i:i + 3]) for i in range(0, len(nuc_seq), 3)]
+
+    # Categorize codons into optimal and non-optimal categories
+    optimal_codons = []
+    nonoptimal_codons = []
+
+    for codon in codons:
+        found_optimal = False
+        for aa, opt_list in OPT_CODONS_E_COLI.items():
+            if codon in opt_list:
+                optimal_codons.append(codon)
+                found_optimal = True
+                break
+        if not found_optimal:
+            nonoptimal_codons.append(codon)
+
+    # Calculate the number of codons to sample from each category based on the given percentages
+    num_optimal = int(len(codons) * opt_percent)
+    num_nonoptimal = len(codons) - num_optimal  # The rest will be non-optimal
+
+    # Ensure the number of sampled codons does not exceed the available codons and repeat if necessary
+    randomized_optimal = (random.sample(optimal_codons, len(optimal_codons)) * (num_optimal // len(optimal_codons))) + random.sample(optimal_codons, num_optimal % len(optimal_codons))
+    randomized_nonoptimal = (random.sample(nonoptimal_codons, len(nonoptimal_codons)) * (num_nonoptimal // len(nonoptimal_codons))) + random.sample(nonoptimal_codons, num_nonoptimal % len(nonoptimal_codons))
+
+    # Combine and shuffle the selected codons
+    randomized_codons = randomized_optimal + randomized_nonoptimal
+    random.shuffle(randomized_codons)
+
+    # Reconstruct the nucleotide sequence from the randomized codons
+    randomized_seq = "".join(randomized_codons)
+
+    return randomized_seq
     
 def main():
     sim = pt.Model(cell_volume=CELL_VOLUME)
@@ -220,14 +251,17 @@ def main():
     # gene_10A_sequence = None
     gene10_start = None
     gene10_stop = None
+    gene10_feature = None
     for feature in record.features:
         if feature.type == "gene" and "gene 10A" in feature.qualifiers["note"]:
             # print(f"Found gene 10A: {feature}")
             # gene_10A_sequence = feature.extract(record.seq)
             gene10_start = feature.location.start
             gene10_stop = feature.location.end
+            gene10_feature = feature
             break
 
+    ### Save the gene 10A sequence to a FASTA file
     # if gene_10A_sequence:
     #     print(f"Gene 10A sequence: {gene_10A_sequence}")
     #     # Save the sequence to a FASTA file
@@ -238,25 +272,36 @@ def main():
     # else:
     #     print("Gene 10A not found")
 
-    # Define the deoptimized sequence index
-    deoptimized_index = int(sys.argv[3])
+    ### Incorporate deoptimized gene 10A sequence into the genome
+    # # Define the deoptimized sequence index
+    # deoptimized_index = int(sys.argv[3])
 
-    # Read the deoptimized sequences from the FASTA file
-    # deoptimized_sequences = list(SeqIO.parse("src/python/models/trna_phage_model/gene_10A_deoptimized.fasta", "fasta"))
-    deoptimized_sequences = list(SeqIO.parse("src/python/models/trna_phage_model/gene_10A_deoptimized_extend.fasta", "fasta"))
-    print(deoptimized_sequences)
+    # # Read the deoptimized sequences from the FASTA file
+    # # deoptimized_sequences = list(SeqIO.parse("src/python/models/trna_phage_model/gene_10A_deoptimized.fasta", "fasta"))
+    # deoptimized_sequences = list(SeqIO.parse("src/python/models/trna_phage_model/gene_10A_deoptimized_extend.fasta", "fasta"))
+    # print(deoptimized_sequences)
 
-    if deoptimized_index < len(deoptimized_sequences):
-        deoptimized_sequence = deoptimized_sequences[deoptimized_index].seq
-        # Replace the original gene 10A sequence with the deoptimized sequence
-        if gene10_start is not None and gene10_stop is not None:
-            record.seq = record.seq[:gene10_start] + deoptimized_sequence + record.seq[gene10_stop:]
-            print(f"New genome sequence with deoptimized gene 10A at index {deoptimized_index} and seed {sys.argv[2]}")
-            #print(record.seq[gene10_start:gene10_stop])
-        else:
-            print("gene10_start or gene10_stop is None")
-    else:
-        print(f"Deoptimized sequence at index {deoptimized_index} not found")
+    # if deoptimized_index < len(deoptimized_sequences):
+    #     deoptimized_sequence = deoptimized_sequences[deoptimized_index].seq
+    #     # Replace the original gene 10A sequence with the deoptimized sequence
+    #     if gene10_start is not None and gene10_stop is not None:
+    #         record.seq = record.seq[:gene10_start] + deoptimized_sequence + record.seq[gene10_stop:]
+    #         print(f"New genome sequence with deoptimized gene 10A at index {deoptimized_index} and seed {sys.argv[2]}")
+    #         #print(record.seq[gene10_start:gene10_stop])
+    #     else:
+    #         print("gene10_start or gene10_stop is None")
+    # else:
+    #     print(f"Deoptimized sequence at index {deoptimized_index} not found")
+
+    # Use randomize_codons to generate a randomized gene 10A sequence and replace the original gene 10A sequence
+    opt_percent = float(sys.argv[3])
+
+    randomized_sequence = randomize_codons(record, gene10_feature, opt_percent)
+
+    # Replace the original gene 10A sequence with the randomized sequence
+    record.seq = record.seq[:gene10_start] + randomized_sequence + record.seq[gene10_stop:]
+    print(f"Randomized gene 10A sequence with {opt_percent*100}% optimal codons")
+    print(record.seq[gene10_start:gene10_stop])
 
     phage = pt.Genome(name="phage", length=len(record.seq))
     phage.add_sequence(str(record.seq))
@@ -299,12 +344,11 @@ def main():
     #------------------------------------------------------------
 
         opt_factor = sys.argv[5]
-        nonopt_factor = sys.argv[6]
 
     #------------------------------------------------------------
 
         if feature.type == "CDS":
-            weights = compute_cds_weights(record, feature, opt_factor, nonopt_factor, weights)
+            weights = compute_cds_weights(record, feature, opt_factor, weights)
 
     mask_interactions = ["rnapol-1", "rnapol-3.5",
                          "ecolipol", "ecolipol-p", "ecolipol-2", "ecolipol-2-p"]

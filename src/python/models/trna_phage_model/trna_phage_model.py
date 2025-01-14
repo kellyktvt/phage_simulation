@@ -121,24 +121,34 @@ def get_terminator_interactions(name):
         return {'name': 0.0}
 
 
-def compute_cds_weights(record, feature, factor, weights):
-    # Grab the gene name
+def compute_cds_weights(record, feature, opt_factor, nonopt_factor, weights):
+    # Extract nucleotide sequence
     nuc_seq = feature.location.extract(record).seq
+    # Extract translated amino acid sequence
     aa_seq = feature.qualifiers["translation"][0]
+    # Initialize weight_sum 
     weight_sum = 0
+    # Iterate over nucleotide sequence
     for index, nuc in enumerate(nuc_seq):
+        # Calculate amino acid index (Divide nucleotide index by 3 since an amino acid is 3 nucleotides aka 1 codon)
         aa_index = int(index / 3)
+        # Determine start index of codon
         codon_start = aa_index * 3
+        # Extract codon from nucleotide sequence
         codon = nuc_seq[codon_start:codon_start + 3]
+        # Calculate genome index of nucleotide, accounting feature's location
         genome_index = feature.location.start + index
+        # Check if amino acid seq is long enough to have an amino acid at the current index
         if aa_index < len(aa_seq):
+            # Check if amino acid at current index has optimal codons
             if aa_seq[aa_index] in OPT_CODONS_E_COLI:
+                # Check if codon is optimal
                 if codon in OPT_CODONS_E_COLI[aa_seq[aa_index]]:
-                    weights[genome_index] = factor
-                    weight_sum += factor
+                    weights[genome_index] = opt_factor
+                    weight_sum += opt_factor
                 else:
-                    weights[genome_index] = 1
-                    weight_sum += 1
+                    weights[genome_index] = nonopt_factor
+                    weight_sum += nonopt_factor
     return weights
 
 
@@ -184,6 +194,9 @@ def tRNA_map_maker():
 
     return tRNA_map
 
+def randomize_codons(record, seq):
+    # Extract nucleotide sequence
+    nuc_seq = feature.location.extract(record).seq
     
 def main():
     sim = pt.Model(cell_volume=CELL_VOLUME)
@@ -282,8 +295,16 @@ def main():
             # Construct CDS parameters for this gene
             phage.add_gene(name=name, start=start, stop=stop,
                            rbs_start=start - 30, rbs_stop=start, rbs_strength=1e7)
+
+    #------------------------------------------------------------
+
+        opt_factor = sys.argv[5]
+        nonopt_factor = sys.argv[6]
+
+    #------------------------------------------------------------
+
         if feature.type == "CDS":
-            weights = compute_cds_weights(record, feature, 1.0, weights)
+            weights = compute_cds_weights(record, feature, opt_factor, nonopt_factor, weights)
 
     mask_interactions = ["rnapol-1", "rnapol-3.5",
                          "ecolipol", "ecolipol-p", "ecolipol-2", "ecolipol-2-p"]

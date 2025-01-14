@@ -77,15 +77,18 @@ sims <- sim_data |>
   filter(time == max_time, gene_number == gene_name) |>
   select(multiplier, protein)
 
-# Create the plot
-plot <- ggplot(sims, aes(x = multiplier, y = protein)) +
+# Adjust multiplier to ensure that 1 maps to 0 on the log scale
+sims <- sims %>%
+  mutate(multiplier_log = log2(multiplier))  # Apply log2 transformation directly to the multiplier
+
+# Create the plot with the adjusted log scale
+plot <- ggplot(sims, aes(x = multiplier_log, y = protein)) +
   geom_line() +
-  geom_point()+
+  geom_point() +
   theme_minimal() +
-  labs(x = "Weight Factor", 
-    y = paste("Protein Abundance at", max_time, "s for Gene", gene_name), 
-    title = paste("Protein Abundance at", max_time, "s for Gene", gene_name, "\nfor Fractions of Optimal Codons   [ Using the Old Model ]")) +
-  scale_x_continuous(trans = "log2")
+  labs(x = "Log2(Weight Factor)", 
+       y = paste("Protein Abundance at", max_time, "s for Gene", gene_name), 
+       title = paste("Protein Abundance at", max_time, "s for Gene", gene_name, "\nfor Fractions of Optimal Codons   [ Using the Old Model ]"))
 
 if (SAVE_FIGS) {
   save_plot(sprintf("analysis/figures/old_gene%sproteins_by_weight_factor_%ds.pdf", gene_name, max_time), plot, base_width = 6, base_height = 6)

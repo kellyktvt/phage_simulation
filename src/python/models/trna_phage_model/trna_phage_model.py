@@ -5,6 +5,7 @@ import time
 import urllib.error
 import random
 import sys
+import os
 
 CELL_VOLUME = 1.1e-15
 PHI10_BIND = 1.82e7  # Binding constant for phi10
@@ -121,43 +122,6 @@ def get_terminator_interactions(name):
     else:
         return {'name': 0.0}
 
-
-def compute_cds_weights(record, feature, opt_factor, nonopt_factor, weights):
-    # Extract nucleotide sequence
-    nuc_seq = feature.location.extract(record).seq
-    # Extract translated amino acid sequence
-    aa_seq = feature.qualifiers["translation"][0]
-    
-    # Iterate over nucleotide sequence
-    for index, nuc in enumerate(nuc_seq):
-        # Calculate amino acid index (Divide nucleotide index by 3 since an amino acid is 3 nucleotides aka 1 codon)
-        aa_index = int(index / 3)
-        # Determine start index of codon
-        codon_start = aa_index * 3
-        # Extract codon from nucleotide sequence
-        codon = nuc_seq[codon_start:codon_start + 3]
-        # Calculate genome index of nucleotide, accounting feature's location
-        genome_index = feature.location.start + index
-
-        # Check if amino acid seq is long enough to have an amino acid at the current index
-        if aa_index < len(aa_seq):
-            # Check if amino acid at current index has optimal codons
-            if aa_seq[aa_index] in OPT_CODONS_E_COLI and codon in OPT_CODONS_E_COLI[aa_seq[aa_index]]:
-                weights[genome_index] = opt_factor
-            else:
-                weights[genome_index] = nonopt_factor
-    return weights
-
-
-def normalize_weights(weights):
-    # Average over all CDSs, which will have non-zero weights
-    non_zero = sum(1 if i != 0 else 0.0 for i in weights)
-    mean_weight = sum(weights) / non_zero
-    norm_weights = [i / mean_weight for i in weights]
-    # Replace non-CDS weights with 1
-    norm_weights = [1 if i == 0 else i for i in norm_weights]
-    return norm_weights
-
 #----------------------------------------------------------------------------
 
 def tRNA_map_maker():
@@ -191,7 +155,7 @@ def tRNA_map_maker():
 
     return tRNA_map
 
-def randomize_codons(record, feature, opt_percent):
+def randomize_codons(record, feature, fop):
     # Extract nucleotide sequence
     nuc_seq = feature.location.extract(record).seq
 
@@ -213,7 +177,7 @@ def randomize_codons(record, feature, opt_percent):
             nonoptimal_codons.append(codon)
 
     # Calculate the number of codons to sample from each category based on the given percentages
-    num_optimal = int(len(codons) * opt_percent)
+    num_optimal = int(len(codons) * fop)
     num_nonoptimal = len(codons) - num_optimal  # The rest will be non-optimal
 
     # Ensure the number of sampled codons does not exceed the available codons and repeat if necessary
@@ -229,7 +193,7 @@ def randomize_codons(record, feature, opt_percent):
 
     return randomized_seq
     
-def main():
+def main(fop, charge_rate, pref_proportion, seed_val):
     sim = pt.Model(cell_volume=CELL_VOLUME)
     Entrez.email = "kelly.to@utexas.edu"
 
@@ -261,46 +225,12 @@ def main():
             gene10_feature = feature
             break
 
-    ### Save the gene 10A sequence to a FASTA file
-    # if gene_10A_sequence:
-    #     print(f"Gene 10A sequence: {gene_10A_sequence}")
-    #     # Save the sequence to a FASTA file
-    #     gene_10A_record = SeqRecord(gene_10A_sequence, id="gene_10A", description="gene 10A")
-    #     with open("gene_10A.fasta", "w") as fasta_file:
-    #         SeqIO.write(gene_10A_record, fasta_file, "fasta")
-    #     print(f"Gene 10A sequence saved to {"gene_10A.fasta"}")
-    # else:
-    #     print("Gene 10A not found")
-
-    ### Incorporate deoptimized gene 10A sequence into the genome
-    # # Define the deoptimized sequence index
-    # deoptimized_index = int(sys.argv[3])
-
-    # # Read the deoptimized sequences from the FASTA file
-    # # deoptimized_sequences = list(SeqIO.parse("src/python/models/trna_phage_model/gene_10A_deoptimized.fasta", "fasta"))
-    # deoptimized_sequences = list(SeqIO.parse("src/python/models/trna_phage_model/gene_10A_deoptimized_extend.fasta", "fasta"))
-    # print(deoptimized_sequences)
-
-    # if deoptimized_index < len(deoptimized_sequences):
-    #     deoptimized_sequence = deoptimized_sequences[deoptimized_index].seq
-    #     # Replace the original gene 10A sequence with the deoptimized sequence
-    #     if gene10_start is not None and gene10_stop is not None:
-    #         record.seq = record.seq[:gene10_start] + deoptimized_sequence + record.seq[gene10_stop:]
-    #         print(f"New genome sequence with deoptimized gene 10A at index {deoptimized_index} and seed {sys.argv[2]}")
-    #         #print(record.seq[gene10_start:gene10_stop])
-    #     else:
-    #         print("gene10_start or gene10_stop is None")
-    # else:
-    #     print(f"Deoptimized sequence at index {deoptimized_index} not found")
-
     # Use randomize_codons to generate a randomized gene 10A sequence and replace the original gene 10A sequence
-    opt_percent = float(sys.argv[3])
-
-    randomized_sequence = randomize_codons(record, gene10_feature, opt_percent)
+    randomized_sequence = randomize_codons(record, gene10_feature, fop)
 
     # Replace the original gene 10A sequence with the randomized sequence
     record.seq = record.seq[:gene10_start] + randomized_sequence + record.seq[gene10_stop:]
-    print(f"Randomized gene 10A sequence with {opt_percent*100}% optimal codons")
+    print(f"Randomized gene 10A sequence with {fop*100}% optimal codons")
     print(record.seq[gene10_start:gene10_stop])
 
     phage = pt.Genome(name="phage", length=len(record.seq))
@@ -309,7 +239,6 @@ def main():
 #----------------------------------------------------------------------------
 
     for feature in record.features:
-        weights = [0.0] * len(record.seq)
         # Convert to inclusive genomic coordinates
         start = feature.location.start + 1
         stop = feature.location.end
@@ -341,25 +270,9 @@ def main():
             phage.add_gene(name=name, start=start, stop=stop,
                            rbs_start=start - 30, rbs_stop=start, rbs_strength=1e7)
 
-    #------------------------------------------------------------
-
-        opt_factor = sys.argv[5]
-
-    #------------------------------------------------------------
-
-        if feature.type == "CDS":
-            weights = compute_cds_weights(record, feature, opt_factor, weights)
-
     mask_interactions = ["rnapol-1", "rnapol-3.5",
                          "ecolipol", "ecolipol-p", "ecolipol-2", "ecolipol-2-p"]
     phage.add_mask(500, mask_interactions)
-
-#----------------------------------------------------------------------------
-
-    # norm_weights = normalize_weights(weights)
-    # phage.add_weights(norm_weights)
-
-#----------------------------------------------------------------------------
 
     sim.register_genome(phage)
 
@@ -423,24 +336,15 @@ def main():
 #--------------------------------------------------------------------------
 
     # strength of tRNA re-charging reaction [tRNA_a, tRNA_b]   
-    charge_rate = float(sys.argv[4])
     TRNA_CHRG_RATES = [charge_rate, charge_rate]   # originally [100.0, 100.0]
 
-    # tRNA proportions, i.e. 10% total tRNA is pref, other 90% is nonpref
-    pref_proportion = float(sys.argv[1])
+    # tRNA proportions, i.e. 10% total tRNA is pref, other 90% is nonpref 
     nonpref_proportion = 1 - pref_proportion
     TRNA_PROPORTIONS = (pref_proportion, nonpref_proportion)   # originally (0.1, 0.9)
 
-    # get the seed value
-    seed_val = int(sys.argv[2])
-
-    # get the fop value
-    # fop_val = deoptimized_index + 1
-    fop_val = deoptimized_index
-
     # generate a unique filename based on the charge
     output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/charge{charge_rate}"
-    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop_val}.tsv")
+    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop}.tsv")
 
     TOTAL_TRNA = 2500 # total tRNA
 
@@ -457,11 +361,21 @@ def main():
 
     sim.seed(seed_val)
 
-    sim.simulate(time_limit=1200, time_step=5,   # originally time_limit=1200
+    sim.simulate(time_limit=1200, time_step=5, 
                  #output="data/simulation/phage/trna_phage_prop7030.tsv"
                  output=output_filename)
 
 #--------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    # Take in arguments from the jobs file
+    # fraction of optimal codons
+    fop = float(sys.argv[1])
+    # tRNA charging rate
+    charge_rate = int(sys.argv[2])
+    # proportion of preferred tRNAs
+    pref_proportion = float(sys.argv[3])
+    # seed value
+    seed_val = float(sys.argv[4])
+
+    main(fop, charge_rate, pref_proportion, seed_val)

@@ -118,24 +118,31 @@ def get_terminator_interactions(name):
         return {'name': 0.0}
 
 
-def compute_cds_weights(record, feature, factor, weights):
-    # Grab the gene name
+def compute_cds_weights(record, feature, opt_weight, nonopt_weight, weights):
+    # Extract nucleotide sequence
     nuc_seq = feature.location.extract(record).seq
+    # Extract translated amino acid sequence
     aa_seq = feature.qualifiers["translation"][0]
-    weight_sum = 0
+    
+    # Iterate over nucleotide sequence
     for index, nuc in enumerate(nuc_seq):
+        # Calculate amino acid index (Divide nucleotide index by 3 since an amino acid is 3 nucleotides aka 1 codon)
         aa_index = int(index / 3)
+        # Determine start index of codon
         codon_start = aa_index * 3
+        # Extract codon from nucleotide sequence
         codon = nuc_seq[codon_start:codon_start + 3]
+        # Calculate genome index of nucleotide, accounting feature's location
         genome_index = feature.location.start + index
+
+        # Check if amino acid seq is long enough to have an amino acid at the current index
         if aa_index < len(aa_seq):
-            if aa_seq[aa_index] in OPT_CODONS_E_COLI:
-                if codon in OPT_CODONS_E_COLI[aa_seq[aa_index]]:
-                    weights[genome_index] = factor
-                    weight_sum += factor
-                else:
-                    weights[genome_index] = 1
-                    weight_sum += 1
+            # Check if amino acid at current index has optimal codons
+            if aa_seq[aa_index] in OPT_CODONS_E_COLI and codon in OPT_CODONS_E_COLI[aa_seq[aa_index]]:
+                weights[genome_index] = opt_weight
+            else:
+                weights[genome_index] = nonopt_weight
+
     return weights
 
 
@@ -149,7 +156,7 @@ def normalize_weights(weights):
     return norm_weights
 
 
-def main():
+def main(opt_weight, nonopt_weight):
     sim = pt.Model(cell_volume=CELL_VOLUME)
 
     # Download T7 wild-type genbank records
@@ -164,7 +171,7 @@ def main():
     phage = pt.Genome(name="phage", length=genome_length)
 
     for feature in record.features:
-        weights = [0.0] * len(record.seq)
+        weights = [nonopt_weight] * len(record.seq)
         # Convert to inclusive genomic coordinates
         start = feature.location.start + 1
         stop = feature.location.end
@@ -196,7 +203,7 @@ def main():
             phage.add_gene(name=name, start=start, stop=stop,
                            rbs_start=start - 30, rbs_stop=start, rbs_strength=1e7)
         if feature.type == "CDS":
-            weights = compute_cds_weights(record, feature, 1.0, weights)
+            weights = compute_cds_weights(record, feature, opt_weight, nonopt_weight, weights)
 
     mask_interactions = ["rnapol-1", "rnapol-3.5",
                          "ecolipol", "ecolipol-p", "ecolipol-2", "ecolipol-2-p"]
@@ -272,4 +279,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Take in arguments from the jobs file
+    # optimal codon weight 
+    opt_weight = float(sys.argv[1])
+    # nonoptimal codon weight
+    nonopt_weight = float(sys.argv[2])
+
+    main(opt_weight, nonopt_weight)

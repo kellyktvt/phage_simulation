@@ -342,10 +342,6 @@ def main(fop, charge_rate, pref_proportion, seed_val):
     nonpref_proportion = 1 - pref_proportion
     TRNA_PROPORTIONS = (pref_proportion, nonpref_proportion)   # originally (0.1, 0.9)
 
-    # generate a unique filename based on the charge
-    output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/charge{charge_rate}"
-    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop}.tsv")
-
     TOTAL_TRNA = 2500 # total tRNA
 
     # tRNA/codon mapping: 
@@ -360,6 +356,10 @@ def main(fop, charge_rate, pref_proportion, seed_val):
     sim.add_trna(tRNA_map, tRNA_counts, tRNA_rates)
 
     sim.seed(seed_val)
+
+    # generate a unique filename based on the charge
+    output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/charge{charge_rate}"
+    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop}.tsv")
 
     sim.simulate(time_limit=1200, time_step=5, 
                  #output="data/simulation/phage/trna_phage_prop7030.tsv"

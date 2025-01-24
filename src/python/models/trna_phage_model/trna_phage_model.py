@@ -376,6 +376,6 @@ if __name__ == "__main__":
     # proportion of preferred tRNAs
     pref_proportion = float(sys.argv[3])
     # seed value
-    seed_val = float(sys.argv[4])
+    seed_val = int(sys.argv[4])
 
     main(fop, charge_rate, pref_proportion, seed_val)

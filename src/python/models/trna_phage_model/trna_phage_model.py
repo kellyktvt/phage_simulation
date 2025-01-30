@@ -342,7 +342,7 @@ def main(fop, charge_rate, pref_proportion, seed_val):
     nonpref_proportion = 1 - pref_proportion
     TRNA_PROPORTIONS = (pref_proportion, nonpref_proportion)   # originally (0.1, 0.9)
 
-    TOTAL_TRNA = 2500 # total tRNA
+    TOTAL_TRNA = total_trna  # originally 2500
 
     # tRNA/codon mapping: 
     tRNA_map = tRNA_map_maker()
@@ -377,5 +377,7 @@ if __name__ == "__main__":
     pref_proportion = float(sys.argv[3])
     # seed value
     seed_val = int(sys.argv[4])
+    # total trna
+    total_trna = int(sys.argv[5])
 
     main(fop, charge_rate, pref_proportion, seed_val)

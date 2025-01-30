@@ -52,9 +52,9 @@ load_sim <- function(paths) {
 }
 
 # Define the output directories, max time, and gene
-output_dirs <- c("data/simulation/phage/codon_parallel_pref0.7_charge10",
-                 "data/simulation/phage/codon_parallel_pref0.5_charge10")
-max_time <- 825
+output_dirs <- c("data/simulation/phage/revised_dynamic_pref0.7_charge10",
+                 "data/simulation/phage/revised_dynamic_pref0.5_charge10")
+max_time <- 1200
 gene_name <- "10A"
 
 # Extract pref_val and charge_val from the output directory string
@@ -63,11 +63,11 @@ charge_val <- as.numeric(str_extract(output_dirs[1], "(?<=charge)[0-9]+"))
 
 # Generate file paths
 seeds <- 1:3
-fop_proportions <- 0:10
+fop_proportions <- seq(0.0, 1.0, by = 0.1)
 
 file_paths <- expand.grid(seed = seeds, fop = fop_proportions, pref_val = pref_vals) %>%
   mutate(output_dir = ifelse(pref_val == 0.7, output_dirs[1], output_dirs[2])) %>%
-  mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%d.tsv", pref_val, seed, fop)) %>%
+  mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%.1f.tsv", pref_val, seed, fop)) %>%
   mutate(full_path = file.path(output_dir, file_name))
 
 # Load all simulations
@@ -77,7 +77,7 @@ all_data <- load_sim(file_paths$full_path)
 all_data <- all_data %>%
   mutate(
     seed = as.numeric(str_extract(file, "(?<=_)[0-9]+(?=_fop)")),
-    fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+")),
+    fop = as.numeric(str_extract(file, "(?<=fop)[0-9]\\.[0-9]")),
     pref = as.numeric(str_extract(file, "(?<=pref)[0-9]\\.[0-9]"))
   )
 
@@ -101,9 +101,9 @@ avg_plot <- ggplot(avg_proteins, aes(x = fop, y = avg_protein, color = as.factor
     y = paste("Protein Abundance at", max_time, "s for gene", gene_name), 
     title = paste("Protein Abundance at", max_time, "s for gene", gene_name, "\nfor Fractions of Optimal Codons   [ tRNA charge rate:", charge_val,"]"),
     color = "Fraction of Preferred tRNAs") +
-  scale_x_continuous(breaks = seq(0, 10, by = 1), labels = seq(0, 1, by = 0.1))
+  scale_x_continuous(breaks = seq(0, 1, by = 0.1), labels = seq(0, 1, by = 0.1))
 
 if (SAVE_FIGS) {
-  save_plot(sprintf("analysis/figures/gene%sproteins_by_codon_proportion_%ds_multipref_charge%d.pdf", gene_name, max_time, charge_val), avg_plot, base_width = 6, base_height = 6)
+  save_plot(sprintf("analysis/figures/revised_dynamic_gene%sproteins_by_codon_proportion_%ds_multipref_charge%d.pdf", gene_name, max_time, charge_val), avg_plot, base_width = 6, base_height = 6)
 }
 ```

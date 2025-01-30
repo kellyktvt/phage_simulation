@@ -50,9 +50,9 @@ load_sim <- function(path) {
     filter(!(pinetree %in% IGNORE_GENES), !is.na(gene_number))
 }
 
-data <- load_sim("data/simulation/phage/trna_phage_wildtype.tsv")
+data <- load_sim("data/simulation/phage/old_phage_wildtype.tsv")
 
-bar_sim_plot <- ggplot(data %>% filter(time == 900), aes(x=factor(gene_number, gene_labels), 
+bar_sim_plot <- ggplot(data %>% filter(time == 1200), aes(x=factor(gene_number, gene_labels), 
                                                              y=protein, fill=factor(class))) +
   geom_bar(stat = "identity") +
   geom_vline(xintercept = (match(c("3.8", "4.7", "6.5", "18.5"), gene_labels)) - 0.5, 
@@ -72,7 +72,7 @@ lineplot <- ggplot(data, aes(x=time, y=protein, group = gene_number, color=facto
   scale_color_manual(values=cbPalette, breaks=c("1","2","3"), labels=c("class I", "class II", "class III")) + xlim(0,1000) 
 
 if (SAVE_FIGS) {
-  save_plot("analysis/figures/trna_proteins_9010_900.pdf", bar_sim_plot, base_width = 8, base_height = 3)
-  save_plot("analysis/figures/trna_proteins_lineplot_9010_900.pdf", lineplot, base_height = 4, base_aspect_ratio = 1.7)
+  save_plot("analysis/figures/phage_wildtype_protein_barplot.pdf", bar_sim_plot, base_width = 8, base_height = 3)
+  save_plot("analysis/figures/phage_wildtype_protein_lineplot.pdf", lineplot, base_height = 4, base_aspect_ratio = 1.7)
 }
 ```

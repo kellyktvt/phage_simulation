@@ -11,6 +11,6 @@ module load launcher
 source /work/10081/kellyktvt/ls6/pinetree/.venv-trnas/bin/activate
 
 export LAUNCHER_WORKDIR=/work/10081/kellyktvt/ls6/phage_simulation
-export LAUNCHER_JOB_FILE=/work/10081/kellyktvt/ls6/phage_simulation/src/python/models/phage_model_jobs.txt
+export LAUNCHER_JOB_FILE=/work/10081/kellyktvt/ls6/phage_simulation/src/python/models/jobs_phage_model_fixed.txt
 
 ${LAUNCHER_DIR}/paramrun

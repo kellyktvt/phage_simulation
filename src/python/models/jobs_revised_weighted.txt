@@ -1,3 +1,9 @@
-nohup python3 src/python/models/revised_weighted_phage_model.py 1.0 0.5 1 > job_1.log 2>&1 &
-nohup python3 src/python/models/revised_weighted_phage_model.py 1.0 0.5 2 > job_2.log 2>&1 &
-nohup python3 src/python/models/revised_weighted_phage_model.py 1.0 0.5 3 > job_3.log 2>&1 &
+nohup nice -n 10 python3 src/python/models/revised_weighted_phage_model.py 1 0.5 1 > src/python/models/job_1.log 2>&1 &
+nohup nice -n 10 python3 src/python/models/revised_weighted_phage_model.py 1 0.5 2 > src/python/models/job_2.log 2>&1 &
+nohup nice -n 10 python3 src/python/models/revised_weighted_phage_model.py 1 0.5 3 > src/python/models/job_3.log 2>&1 &
+nohup nice -n 10 python3 src/python/models/revised_weighted_phage_model.py 0.5 0.25 1 > src/python/models/job_4.log 2>&1 &
+nohup nice -n 10 python3 src/python/models/revised_weighted_phage_model.py 0.5 0.25 2 > src/python/models/job_5.log 2>&1 &
+nohup nice -n 10 python3 src/python/models/revised_weighted_phage_model.py 0.5 0.25 3 > src/python/models/job_6.log 2>&1 &
+nohup nice -n 10 python3 src/python/models/revised_weighted_phage_model.py 0.1 0.05 1 > src/python/models/job_7.log 2>&1 &
+nohup nice -n 10 python3 src/python/models/revised_weighted_phage_model.py 0.1 0.05 2 > src/python/models/job_8.log 2>&1 &
+nohup nice -n 10 python3 src/python/models/revised_weighted_phage_model.py 0.1 0.05 3 > src/python/models/job_9.log 2>&1 &

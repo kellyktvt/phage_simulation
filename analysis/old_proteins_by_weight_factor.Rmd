@@ -37,52 +37,64 @@ IGNORE_GENES <- c("gene 10B",
 # Load labels
 labels <- read_csv("output/id_map.csv") |> filter(!is.na(gene_number))
 # Function to load and process simulation data
-load_sim <- function(path, multiplier) {
-  read_tsv(path,
-          col_types = cols(
-            species = col_character(),
-            time = col_double(),
-            protein = col_double(),
-            transcript = col_double(),
-            ribo_density = col_double()
-          ),
-          show_col_types = FALSE) |> 
-    group_by(time) |> 
-    nest() |>
-    mutate(data = purrr::map(data, ~left_join(labels, ., by = c("pinetree" = "species")))) |>
-    unnest(cols = c(data)) |>
-    mutate(time = round(time)) |>
-    mutate(protein = if_else(is.na(protein), 0, protein),
-           transcript = if_else(is.na(transcript), 0, transcript),
-           multiplier = multiplier) |>
-    filter(!(pinetree %in% IGNORE_GENES), !is.na(gene_number))
+load_sim <- function(paths) {
+  data_list <- lapply(paths, function(path) {
+    read_tsv(path) %>%
+      mutate(file = path) %>%  # Add the file path as a column
+      group_by(time) %>%
+      nest() %>%
+      mutate(data = purrr::map(data, ~left_join(labels, ., by = c("pinetree" = "species")))) %>%
+      unnest() %>%
+      mutate(time = round(time)) %>%
+      mutate(protein = if_else(is.na(protein), 0, protein),
+             transcript = if_else(is.na(transcript), 0, transcript)) %>%
+      filter(!(pinetree %in% IGNORE_GENES), !is.na(gene_number))
+  })
+  bind_rows(data_list)
 }
 ```
 
 ```{r}
-# Define the multipliers with specific values
-multipliers <- c(0.001, 0.01, seq(0.1, 1.0, by = 0.1), 10.0, 100.0)
-
-sim_data <- lapply(multipliers, function(m) {
-  file_path <- sprintf("data/simulation/phage/old_model_parallel/output_%.3f.tsv", m)
-  load_sim(file_path, m)
-})
-sim_data <- bind_rows(sim_data)
-
 max_time <- 1200
 gene_name <- "10A"
+model_output_dir <- sprintf("data/simulation/phage/phage_model_fixed")
 
-# Filter and select relevant data
-sims <- sim_data |>
-  filter(time == max_time, gene_number == gene_name) |>
-  select(multiplier, protein)
+# Define the multipliers with specific values
+multiplier_vals <- c(0.001, 0.01, seq(0.1, 1.0, by = 0.1), 10.0, 100.0)
+
+# Generate file paths
+seed_vals <- 1:3
+file_paths <- expand.grid(multiplier = multiplier_vals, seed = seed_vals) %>%
+  mutate(output_dir = model_output_dir) %>%
+  mutate(file_name = sprintf("phage_model_fixed_weight_factor%.3f_seed%d.tsv", multiplier, seed)) %>%
+  mutate(full_path = file.path(output_dir, file_name))
+
+# Load all simulations
+sim_data <- load_sim(file_paths$full_path)
+
+# Add multiplier and seed columns
+sim_data <- sim_data %>%
+  mutate(
+    multiplier =  as.numeric(str_extract(file, "(?<=weight_factor)[0-9]{1,2}\\.[0-9]+(?=_seed)")),
+    seed = as.numeric(str_extract(file, "(?<=_seed)[0-9]+(?=\\.tsv)"))
+  )
+
+# Filter the data to include only the specified gene
+gene_data <- sim_data %>%
+  filter(str_detect(pinetree, paste("gene", gene_name)))
+
+# Calculate average proteins for each multiplier at max time
+sims <- gene_data %>%
+  filter(time == max_time) %>%
+  group_by(multiplier) %>%  
+  summarize(avg_protein = mean(protein), .groups = "drop")
 
 # Adjust multiplier to ensure that 1 maps to 0 on the log scale
 sims <- sims %>%
   mutate(multiplier_log = log2(multiplier))  # Apply log2 transformation directly to the multiplier
 
 # Create the plot with the adjusted log scale
-plot <- ggplot(sims, aes(x = multiplier_log, y = protein)) +
+plot <- ggplot(sims, aes(x = multiplier_log, y = avg_protein)) +
   geom_line() +
   geom_point() +
   theme_minimal() +
@@ -91,6 +103,6 @@ plot <- ggplot(sims, aes(x = multiplier_log, y = protein)) +
        title = paste("Protein Abundance at", max_time, "s for Gene", gene_name, "\nfor Fractions of Optimal Codons   [ Using the Old Model ]"))
 
 if (SAVE_FIGS) {
-  save_plot(sprintf("analysis/figures/old_gene%sproteins_by_weight_factor_%ds.pdf", gene_name, max_time), plot, base_width = 6, base_height = 6)
+  save_plot(sprintf("analysis/figures/fixed_gene%sproteins_by_weight_factor_%ds.pdf", gene_name, max_time), plot, base_width = 6, base_height = 6)
 }
 ```

@@ -1,9 +1,9 @@
 from Bio import Entrez, SeqIO
 import pinetree as pt
 import sys
-import time
-import urllib
 import os
+import urllib
+import time
 
 CELL_VOLUME = 1.1e-15
 PHI10_BIND = 1.82e7  # Binding constant for phi10
@@ -121,31 +121,24 @@ def get_terminator_interactions(name):
         return {'name': 0.0}
 
 
-def compute_cds_weights(record, feature, opt_weight, nonopt_weight, weights):
-    # Extract nucleotide sequence
+def compute_cds_weights(record, feature, factor, weights):
+    # Grab the gene name
     nuc_seq = feature.location.extract(record).seq
-    # Extract translated amino acid sequence
     aa_seq = feature.qualifiers["translation"][0]
-    
-    # Iterate over nucleotide sequence
+    weight_sum = 0
     for index, nuc in enumerate(nuc_seq):
-        # Calculate amino acid index (Divide nucleotide index by 3 since an amino acid is 3 nucleotides aka 1 codon)
         aa_index = int(index / 3)
-        # Determine start index of codon
         codon_start = aa_index * 3
-        # Extract codon from nucleotide sequence
         codon = nuc_seq[codon_start:codon_start + 3]
-        # Calculate genome index of nucleotide, accounting feature's location
         genome_index = feature.location.start + index
-
-        # Check if amino acid seq is long enough to have an amino acid at the current index
         if aa_index < len(aa_seq):
-            # Check if amino acid at current index has optimal codons
-            if aa_seq[aa_index] in OPT_CODONS_E_COLI and codon in OPT_CODONS_E_COLI[aa_seq[aa_index]]:
-                weights[genome_index] = opt_weight
-            else:
-                weights[genome_index] = nonopt_weight
-
+            if aa_seq[aa_index] in OPT_CODONS_E_COLI:
+                if codon in OPT_CODONS_E_COLI[aa_seq[aa_index]]:
+                    weights[genome_index] = factor
+                    weight_sum += factor
+                else:
+                    weights[genome_index] = 1
+                    weight_sum += 1
     return weights
 
 
@@ -159,7 +152,7 @@ def normalize_weights(weights):
     return norm_weights
 
 
-def main(opt_weight, nonopt_weight):
+def main(weight_factor, seed_val):
     sim = pt.Model(cell_volume=CELL_VOLUME)
     Entrez.email = "kelly.to@utexas.edu"
 
@@ -179,7 +172,7 @@ def main(opt_weight, nonopt_weight):
                 print(f"Failed to fetch GenBank record: {e}")
                 break
 
-    weights = [nonopt_weight] * len(record.seq)
+    weights = [1.0] * len(record.seq)
     for feature in record.features:
         # Convert to inclusive genomic coordinates
         start = feature.location.start + 1
@@ -212,7 +205,7 @@ def main(opt_weight, nonopt_weight):
             phage.add_gene(name=name, start=start, stop=stop,
                            rbs_start=start - 30, rbs_stop=start, rbs_strength=1e7)
         if feature.type == "CDS":
-            weights = compute_cds_weights(record, feature, opt_weight, nonopt_weight, weights)
+            weights = compute_cds_weights(record, feature, weight_factor, weights)
 
     mask_interactions = ["rnapol-1", "rnapol-3.5",
                          "ecolipol", "ecolipol-p", "ecolipol-2", "ecolipol-2-p"]
@@ -279,10 +272,10 @@ def main(opt_weight, nonopt_weight):
     sim.seed(seed_val)
 
     # generate a unique filename based on the charge
-    output_dir = f"data/simulation/phage/revised_weighted_opt{opt_weight}_nonopt{nonopt_weight}"
+    output_dir = f"data/simulation/phage/phage_model_fixed"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    output_filename = os.path.join(output_dir, f"revised_weighted_opt{opt_weight}_nonopt{nonopt_weight}_seed{seed_val}.tsv")
+    output_filename = os.path.join(output_dir, f"phage_model_fixed_weight_factor{weight_factor:.3f}_seed{seed_val}.tsv")
 
     print("Starting simulation...")
     try:
@@ -295,11 +288,9 @@ def main(opt_weight, nonopt_weight):
 
 if __name__ == "__main__":
     # Take in arguments from the jobs file
-    # optimal codon weight 
-    opt_weight = float(sys.argv[1])
-    # nonoptimal codon weight
-    nonopt_weight = float(sys.argv[2])
+    # weight factor
+    weight_factor = float(sys.argv[1])
     # seed value
-    seed_val = int(sys.argv[3])
+    seed_val = int(sys.argv[2])
 
-    main(opt_weight, nonopt_weight)
+    main(weight_factor, seed_val)

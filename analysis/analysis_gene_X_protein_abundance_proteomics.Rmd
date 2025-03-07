@@ -1,0 +1,91 @@
+---
+title: "Gene X Protein Abundance - Proteomics"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+setwd("/stor/work/Wilke/kelly/phage_simulation")
+
+library(tidyverse)
+library(ggplot2)
+library(gtools)
+library(stringr)
+library(cowplot)
+library(readxl)
+SAVE_FIGS <- TRUE
+
+cbPalette <- c("#CC79A7", "#56B4E9", "#E69F00", "#F0E442", "#0072B2", "#D55E00", "#009E73", "#999999")
+
+# These are genes that are not included in the simulation and should be removed before comparing
+# simulations with experimental data
+IGNORE_GENES <- c("gene 10B",
+                "possible gene 5.5-5.7",
+                "gene 1.5",
+                "gene 1.6",
+                "gene 4.1",
+                "gene 4B",
+                "gene 0.6A",
+                "gene 0.6B",
+                "possible gene 0.6B",
+                "gene 0.5",
+                "gene 0.4")
+```
+
+```{r}
+id_map <- read_csv("output/id_map.csv") %>% filter(!is.na(gene_number), !(pinetree %in% IGNORE_GENES))
+gene_labels <- unique(mixedsort(id_map$gene_number))
+labels <- read_csv("output/id_map.csv") %>% filter(!is.na(gene_number))
+```
+
+```{r}
+
+proteomics <- read_csv("output/proteomics.csv")
+
+proteomics <- proteomics %>%
+  mutate(strain = str_replace_all(strain, c("11-44" = "atten", "11-42" = "evol", "11-46" = "wt"))) %>%
+  mutate(protein_desc = trimws(protein_desc))
+
+# Join in standard T7 gene labels.
+proteomics <- filter(proteomics, org == "phage") %>% 
+  group_by(strain, time, b_rep) %>%
+  # Join by each group seperately so that missing phage proteins are filled in with NAs
+  do(full_join(., labels, by = c("protein_desc" = "accession")) %>% fill(strain, time, b_rep)) %>%
+  mutate(area_norm = ifelse(is.na(area_norm), 0, area_norm))
+         # gene_number = str_replace_all(gene_number, c("10A" = "10"))) # Fill in missing proteins (NAs) with 0
+
+# proteomics <- proteomics %>%
+#   group_by(time, strain, gene_number, class, protein_desc) %>% 
+#   filter(strain == "wt", area_norm != 0) %>%
+#   group_by(gene_number, class, time) %>%
+#   summarize(area_norm = mean(area_norm)) %>%
+#   ungroup() %>% 
+#   group_by(time) %>% 
+#   mutate(area_total = sum(area_norm)) %>% 
+#   group_by(gene_number, class, time) %>% 
+#   mutate(area_norm = area_norm/area_total)
+
+proteomics_plot <- ggplot(proteomics, aes(x=factor(gene_number, gene_labels), area_norm, fill=factor(class))) +
+  geom_bar(stat = "identity") +
+  geom_vline(xintercept = (match(c("3.8", "4.7", "6.5", "18.5"), gene_labels)) - 0.5, 
+             linetype="dashed", color = "gray40") +
+  geom_vline(xintercept = (match(c("11"), gene_labels)) - 0.5) +
+  theme(legend.position = "none") +
+  labs(x="gene", y="area_norm", title='proteomics') +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values=cbPalette)
+
+# lineplot <- ggplot(data, aes(x=time, y=protein, group = gene_number, color=factor(class))) +
+#   geom_line() +
+#   scale_y_continuous(trans = "log10") + 
+#   xlab("time (s)") +
+#   theme(legend.title = element_blank(), legend.spacing.x = unit(2, 'pt')) + 
+#   scale_color_manual(values=cbPalette, breaks=c("1","2","3"), labels=c("class I", "class II", "class III")) + xlim(0,1000) 
+
+if (SAVE_FIGS) {
+  save_plot(sprintf("analysis/figures/protein_counts_proteomics.pdf"), proteomics_plot, base_width = 8, base_height = 7)
+  # save_plot("analysis/figures/trna_proteins_lineplot_9010_900.pdf", lineplot, base_height = 4, base_aspect_ratio = 1.7)
+}
+```

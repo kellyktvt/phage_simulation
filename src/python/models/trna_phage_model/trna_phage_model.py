@@ -1,5 +1,4 @@
 from Bio import Entrez, SeqIO
-from Bio.SeqRecord import SeqRecord
 import pinetree as pt
 import time
 import urllib.error
@@ -193,7 +192,7 @@ def randomize_codons(record, feature, fop):
 
     return randomized_seq
     
-def main(fop, charge_rate, pref_proportion, seed_val):
+def main(fop, charge_rate, pref_proportion, seed_val, ribo_speed, trna_count):
     sim = pt.Model(cell_volume=CELL_VOLUME)
     Entrez.email = "kelly.to@utexas.edu"
 
@@ -283,7 +282,8 @@ def main(fop, charge_rate, pref_proportion, seed_val):
     sim.add_polymerase("ecolipol-2", 35, 45, 0)
     sim.add_polymerase("ecolipol-2-p", 35, 45, 0)
 
-    sim.add_ribosome(30, 30, 0)   # originally speed of 30
+    # footprint, speed, copy number
+    sim.add_ribosome(30, ribo_speed, 0)   # originally speed of 30
 
     sim.add_species("bound_ribosome", 10000)   # originally 10000
 
@@ -342,7 +342,7 @@ def main(fop, charge_rate, pref_proportion, seed_val):
     nonpref_proportion = 1 - pref_proportion
     TRNA_PROPORTIONS = (pref_proportion, nonpref_proportion)   # originally (0.1, 0.9)
 
-    TOTAL_TRNA = 2500
+    TOTAL_TRNA = trna_count
 
     # tRNA/codon mapping: 
     tRNA_map = tRNA_map_maker()
@@ -377,5 +377,9 @@ if __name__ == "__main__":
     pref_proportion = float(sys.argv[3])
     # seed value
     seed_val = int(sys.argv[4])
+    # ribosome speed
+    ribo_speed = int(sys.argv[5])
+    # trna_count
+    trna_count = int(sys.argv[6])
 
-    main(fop, charge_rate, pref_proportion, seed_val)
+    main(fop, charge_rate, pref_proportion, seed_val, ribo_speed, trna_count)

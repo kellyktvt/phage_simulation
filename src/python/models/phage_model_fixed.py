@@ -211,8 +211,8 @@ def main(weight_factor, seed_val):
                          "ecolipol", "ecolipol-p", "ecolipol-2", "ecolipol-2-p"]
     phage.add_mask(500, mask_interactions)
 
-    norm_weights = normalize_weights(weights)
-    phage.add_weights(norm_weights)
+    # norm_weights = normalize_weights(weights)
+    phage.add_weights(weights)
 
     sim.register_genome(phage)
 

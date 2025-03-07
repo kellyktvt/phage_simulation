@@ -1,9 +1,0 @@
-nohup python3 src/python/models/phage_model_fixed.py 0.001 1 > src/python/models/output/output_0.001_1.log 2>&1 &
-nohup python3 src/python/models/phage_model_fixed.py 0.001 2 > src/python/models/output/output_0.001_2.log 2>&1 &
-nohup python3 src/python/models/phage_model_fixed.py 0.001 3 > src/python/models/output/output_0.001_3.log 2>&1 &
-nohup python3 src/python/models/phage_model_fixed.py 0.010 1 > src/python/models/output/output_0.010_1.log 2>&1 &
-nohup python3 src/python/models/phage_model_fixed.py 0.010 2 > src/python/models/output/output_0.010_2.log 2>&1 &
-nohup python3 src/python/models/phage_model_fixed.py 0.010 3 > src/python/models/output/output_0.010_3.log 2>&1 &
-nohup python3 src/python/models/phage_model_fixed.py 100.000 1 > src/python/models/output/output_100.000_1.log 2>&1 &
-nohup python3 src/python/models/phage_model_fixed.py 100.000 2 > src/python/models/output/output_100.000_2.log 2>&1 &
-nohup python3 src/python/models/phage_model_fixed.py 100.000 3 > src/python/models/output/output_100.000_3.log 2>&1 &

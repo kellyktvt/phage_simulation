@@ -4,6 +4,7 @@ import sys
 import time
 import urllib
 import os
+import random
 
 CELL_VOLUME = 1.1e-15
 PHI10_BIND = 1.82e7  # Binding constant for phi10
@@ -159,7 +160,46 @@ def normalize_weights(weights):
     return norm_weights
 
 
-def main(opt_weight, nonopt_weight):
+def randomize_codons(record, feature, fop):
+    # Extract nucleotide sequence
+    nuc_seq = feature.location.extract(record).seq
+
+    # Split the sequence into codons
+    codons = [str(nuc_seq[i:i + 3]) for i in range(0, len(nuc_seq), 3)]
+
+    # Categorize codons into optimal and non-optimal categories
+    optimal_codons = []
+    nonoptimal_codons = []
+
+    for codon in codons:
+        found_optimal = False
+        for aa, opt_list in OPT_CODONS_E_COLI.items():
+            if codon in opt_list:
+                optimal_codons.append(codon)
+                found_optimal = True
+                break
+        if not found_optimal:
+            nonoptimal_codons.append(codon)
+
+    # Calculate the number of codons to sample from each category based on the given percentages
+    num_optimal = int(len(codons) * fop)
+    num_nonoptimal = len(codons) - num_optimal  # The rest will be non-optimal
+
+    # Ensure the number of sampled codons does not exceed the available codons and repeat if necessary
+    randomized_optimal = (random.sample(optimal_codons, len(optimal_codons)) * (num_optimal // len(optimal_codons))) + random.sample(optimal_codons, num_optimal % len(optimal_codons))
+    randomized_nonoptimal = (random.sample(nonoptimal_codons, len(nonoptimal_codons)) * (num_nonoptimal // len(nonoptimal_codons))) + random.sample(nonoptimal_codons, num_nonoptimal % len(nonoptimal_codons))
+
+    # Combine and shuffle the selected codons
+    randomized_codons = randomized_optimal + randomized_nonoptimal
+    random.shuffle(randomized_codons)
+
+    # Reconstruct the nucleotide sequence from the randomized codons
+    randomized_seq = "".join(randomized_codons)
+
+    return randomized_seq
+
+
+def main(fop, opt_weight, nonopt_weight, seed_val):
     sim = pt.Model(cell_volume=CELL_VOLUME)
     Entrez.email = "kelly.to@utexas.edu"
 
@@ -168,8 +208,6 @@ def main(opt_weight, nonopt_weight):
         try:
             handle = Entrez.efetch(db="nuccore", id=["NC_001604"], rettype="gb", retmode="text")
             record = SeqIO.read(handle, "genbank")
-            genome_length = len(record.seq)
-            phage = pt.Genome(name="phage", length=genome_length)
             break
         except urllib.error.HTTPError as e:
             if e.code == 429:
@@ -178,6 +216,31 @@ def main(opt_weight, nonopt_weight):
             else:
                 print(f"Failed to fetch GenBank record: {e}")
                 break
+
+    # Extract the sequence of gene 10A
+    # gene_10A_sequence = None
+    gene10_start = None
+    gene10_stop = None
+    gene10_feature = None
+    for feature in record.features:
+        if feature.type == "gene" and "gene 10A" in feature.qualifiers["note"]:
+            # print(f"Found gene 10A: {feature}")
+            # gene_10A_sequence = feature.extract(record.seq)
+            gene10_start = feature.location.start
+            gene10_stop = feature.location.end
+            gene10_feature = feature
+            break
+
+    # Use randomize_codons to generate a randomized gene 10A sequence and replace the original gene 10A sequence
+    randomized_sequence = randomize_codons(record, gene10_feature, fop)
+
+    # Replace the original gene 10A sequence with the randomized sequence
+    record.seq = record.seq[:gene10_start] + randomized_sequence + record.seq[gene10_stop:]
+    print(f"Randomized gene 10A sequence with {fop*100}% optimal codons")
+    print(record.seq[gene10_start:gene10_stop])
+
+    phage = pt.Genome(name="phage", length=len(record.seq))
+    phage.add_sequence(str(record.seq))
 
     weights = [nonopt_weight] * len(record.seq)
     for feature in record.features:
@@ -218,8 +281,8 @@ def main(opt_weight, nonopt_weight):
                          "ecolipol", "ecolipol-p", "ecolipol-2", "ecolipol-2-p"]
     phage.add_mask(500, mask_interactions)
 
-    norm_weights = normalize_weights(weights)
-    phage.add_weights(norm_weights)
+    # norm_weights = normalize_weights(weights)
+    phage.add_weights(weights)
 
     sim.register_genome(phage)
 
@@ -282,7 +345,7 @@ def main(opt_weight, nonopt_weight):
     output_dir = f"data/simulation/phage/revised_weighted_opt{opt_weight}_nonopt{nonopt_weight}"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    output_filename = os.path.join(output_dir, f"revised_weighted_opt{opt_weight}_nonopt{nonopt_weight}_seed{seed_val}.tsv")
+    output_filename = os.path.join(output_dir, f"revised_weighted_opt{opt_weight}_nonopt{nonopt_weight}_{seed_val}_fop{fop}.tsv")
 
     print("Starting simulation...")
     try:
@@ -295,11 +358,13 @@ def main(opt_weight, nonopt_weight):
 
 if __name__ == "__main__":
     # Take in arguments from the jobs file
+    # fraction of optimal codons
+    fop = float(sys.argv[1])
     # optimal codon weight 
-    opt_weight = float(sys.argv[1])
+    opt_weight = float(sys.argv[2])
     # nonoptimal codon weight
-    nonopt_weight = float(sys.argv[2])
+    nonopt_weight = float(sys.argv[3])
     # seed value
-    seed_val = int(sys.argv[3])
+    seed_val = int(sys.argv[4])
 
-    main(opt_weight, nonopt_weight)
+    main(fop, opt_weight, nonopt_weight, seed_val)

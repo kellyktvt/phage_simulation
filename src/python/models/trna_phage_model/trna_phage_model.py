@@ -359,7 +359,7 @@ def main(fop, charge_rate, pref_proportion, seed_val, ribo_speed, trna_count):
 
     # generate a unique filename based on the charge
     output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/charge{charge_rate}"
-    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop}.tsv")
+    output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop}_ribospeed{ribo_speed}_trna{trna_count}.tsv")
 
     sim.simulate(time_limit=1200, time_step=5, 
                  #output="data/simulation/phage/trna_phage_prop7030.tsv"
@@ -378,7 +378,7 @@ if __name__ == "__main__":
     # seed value
     seed_val = int(sys.argv[4])
     # ribosome speed
-    ribo_speed = int(sys.argv[5])
+    ribo_speed = float(sys.argv[5])
     # trna_count
     trna_count = int(sys.argv[6])
 

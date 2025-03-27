@@ -1,0 +1,104 @@
+---
+title: "Gene X Protein Abundance - Revised Weighted & Dynamic"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+setwd("/stor/work/Wilke/kelly/phage_simulation")
+
+library(tidyverse)
+library(ggplot2)
+library(gtools)
+library(stringr)
+library(cowplot)
+library(readxl)
+SAVE_FIGS <- TRUE
+
+cbPalette <- c("#CC79A7", "#56B4E9", "#E69F00", "#F0E442", "#0072B2", "#D55E00", "#009E73", "#999999")
+
+# These are genes that are not included in the simulation and should be removed before comparing
+# simulations with experimental data
+IGNORE_GENES <- c("gene 10B",
+                "possible gene 5.5-5.7",
+                "gene 1.5",
+                "gene 1.6",
+                "gene 4.1",
+                "gene 4B",
+                "gene 0.6A",
+                "gene 0.6B",
+                "possible gene 0.6B",
+                "gene 0.5",
+                "gene 0.4")
+```
+
+```{r}
+id_map <- read_csv("output/id_map.csv") %>% filter(!is.na(gene_number), !(pinetree %in% IGNORE_GENES))
+gene_labels <- unique(mixedsort(id_map$gene_number))
+
+labels <- read_csv("output/id_map.csv") %>% filter(!is.na(gene_number))
+load_sim <- function(paths) {
+  data_list <- lapply(paths, function(path) {
+    read_tsv(path) %>%
+      mutate(file = path) %>%
+      group_by(time) %>%
+      nest() %>%
+      mutate(data = purrr::map(data, ~full_join(labels, ., by = c("pinetree" = "species")))) %>%
+      unnest(cols = c(data)) %>%
+      mutate(time = round(time)) %>%
+      mutate(protein = if_else(is.na(protein), 0, protein),
+             transcript = if_else(is.na(transcript), 0, transcript)) %>%
+      filter(!(pinetree %in% IGNORE_GENES), !is.na(gene_number))
+  })
+  bind_rows(data_list)
+}
+```
+
+```{r}
+max_time <- 730
+
+########## Dynamic Model
+pref_val <- 0.7
+charge_val <- 10
+fop_proportion <- 0.7
+ribo_speed <- 0.1
+trna_count <- 50000
+dynamic_output_dir <- sprintf("data/simulation/phage/revised_dynamic_pref%.1f_charge%d", pref_val, charge_val)
+
+# Generate file paths
+seeds <- 3
+file_paths <- expand.grid(seed = seeds, fop = fop_proportion, pref_val = pref_val, ribo_speed = ribo_speed, trna_count = trna_count) %>%
+  mutate(output_dir = dynamic_output_dir) %>%
+  mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%.1f_ribospeed%.1f_trna%d.tsv", pref_val, seed, fop, ribo_speed, trna_count)) %>%
+  mutate(full_path = file.path(output_dir, file_name))
+
+# Load all simulations
+dynamic_data <- load_sim(file_paths$full_path)
+
+# Add seed column
+dynamic_data <- dynamic_data %>%
+  mutate(seed = as.numeric(str_extract(file, "(?<=_)[0-9]+(?=_fop)")))
+
+# Calculate average proteins for each proportion at max time
+dynamic_data <- dynamic_data %>%
+  filter(time == max_time) %>%
+  group_by(gene_number, class) %>%  # Ensure gene_number is retained
+  summarize(avg_protein = mean(protein), .groups = "drop")
+
+dynamic_bar_sim_plot <- ggplot(dynamic_data, aes(x=factor(gene_number, gene_labels), 
+                                                             y=avg_protein, fill=factor(class))) +
+  geom_bar(stat = "identity") +
+  geom_vline(xintercept = (match(c("3.8", "4.7", "6.5", "18.5"), gene_labels)) - 0.5, 
+             linetype="dashed", color = "gray40") +
+  geom_vline(xintercept = (match(c("11"), gene_labels)) - 0.5) +
+  theme(legend.position = "none") +
+  labs(x="gene", y="simulated proteins", title=sprintf("ribosome speed = %.1f and trna count = %d", ribo_speed, trna_count)) +
+  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values=cbPalette)
+
+if (SAVE_FIGS) {
+  save_plot(sprintf("analysis/figures/revised_protein_counts_dynamic_fop%.1f_pref%.1f_charge%d_ribospeed%.1f_trna%d.pdf", fop_proportion, pref_val, charge_val, ribo_speed, trna_count), dynamic_bar_sim_plot, base_width = 8, base_height = 7)
+}
+```

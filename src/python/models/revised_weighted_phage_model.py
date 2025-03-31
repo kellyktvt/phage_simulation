@@ -204,7 +204,7 @@ def main(fop, opt_weight, nonopt_weight, seed_val):
     Entrez.email = "kelly.to@utexas.edu"
 
     # Download T7 wild-type genbank records
-    for attempt in range(5):
+    for attempt in range(20):
         try:
             handle = Entrez.efetch(db="nuccore", id=["NC_001604"], rettype="gb", retmode="text")
             record = SeqIO.read(handle, "genbank")

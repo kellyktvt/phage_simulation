@@ -39,24 +39,36 @@ gene_labels <- unique(mixedsort(id_map$gene_number))
 
 labels <- read_csv("output/id_map.csv") %>% filter(!is.na(gene_number))
 load_sim <- function(paths) {
-  data_list <- lapply(paths, function(path) {
-    read_tsv(path) %>%
-      mutate(file = path) %>%
-      group_by(time) %>%
-      nest() %>%
-      mutate(data = purrr::map(data, ~full_join(labels, ., by = c("pinetree" = "species")))) %>%
-      unnest(cols = c(data)) %>%
-      mutate(time = round(time)) %>%
-      mutate(protein = if_else(is.na(protein), 0, protein),
-             transcript = if_else(is.na(transcript), 0, transcript)) %>%
-      filter(!(pinetree %in% IGNORE_GENES), !is.na(gene_number))
+  data_list <- lapply(paths, function(path) {   # loop through each file path in paths
+    read_tsv(path) %>%   # read the tsv file at the given path
+      mutate(file = path) %>%   # add column 'file' for file path
+      group_by(time) %>%   # group by time
+      nest() %>%   # convert each group in a nested data frame of 2 columns: time and data (all the rows for that time point)
+      mutate(data = purrr::map(data, ~full_join(labels, ., by = c("pinetree" = "species")))) %>%   # join with the labels data frame
+      unnest(cols = c(data)) %>%   # expand the nested data back into a flat data frame
+      mutate(time = round(time)) %>%   # round the time column
+      mutate(protein = if_else(is.na(protein), 0, protein),   # replace missing protein and transcript values with 0
+             transcript = if_else(is.na(transcript), 0, as.numeric(transcript))) %>%
+      filter(!(pinetree %in% IGNORE_GENES), !is.na(gene_number))   # filter out unwanted genes
   })
-  bind_rows(data_list)
+  bind_rows(data_list)   # combine data frames in data_list into a single data frame
 }
+
+# load_sim <- function(paths) {
+#   data_list <- lapply(paths, function(path) {
+#     sim_data <- read_tsv(path) %>%
+#       mutate(file = path)
+    
+#     # Print the structure of the data frame to inspect column data types
+#     cat("Structure of the data frame after reading the file:\n")
+#     print(str(sim_data))
+#   })
+#   bind_rows(data_list)
+# }
 ```
 
 ```{r}
-max_time <- 730
+max_time <- 745
 
 ########## Dynamic Model
 pref_val <- 0.7
@@ -67,7 +79,7 @@ trna_count <- 50000
 dynamic_output_dir <- sprintf("data/simulation/phage/revised_dynamic_pref%.1f_charge%d", pref_val, charge_val)
 
 # Generate file paths
-seeds <- 3
+seeds <- 1:3
 file_paths <- expand.grid(seed = seeds, fop = fop_proportion, pref_val = pref_val, ribo_speed = ribo_speed, trna_count = trna_count) %>%
   mutate(output_dir = dynamic_output_dir) %>%
   mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%.1f_ribospeed%.1f_trna%d.tsv", pref_val, seed, fop, ribo_speed, trna_count)) %>%

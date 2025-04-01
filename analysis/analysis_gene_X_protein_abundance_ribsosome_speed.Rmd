@@ -68,13 +68,13 @@ load_sim <- function(paths) {
 ```
 
 ```{r}
-max_time <- 745
+max_time <- 1195
 
 ########## Dynamic Model
 pref_val <- 0.7
 charge_val <- 10
 fop_proportion <- 0.7
-ribo_speed <- 0.1
+ribo_speed <- 0.000001
 trna_count <- 50000
 dynamic_output_dir <- sprintf("data/simulation/phage/revised_dynamic_pref%.1f_charge%d", pref_val, charge_val)
 
@@ -82,7 +82,7 @@ dynamic_output_dir <- sprintf("data/simulation/phage/revised_dynamic_pref%.1f_ch
 seeds <- 1:3
 file_paths <- expand.grid(seed = seeds, fop = fop_proportion, pref_val = pref_val, ribo_speed = ribo_speed, trna_count = trna_count) %>%
   mutate(output_dir = dynamic_output_dir) %>%
-  mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%.1f_ribospeed%.1f_trna%d.tsv", pref_val, seed, fop, ribo_speed, trna_count)) %>%
+  mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%.1f_ribospeed%.6f_trna%d.tsv", pref_val, seed, fop, ribo_speed, trna_count)) %>%
   mutate(full_path = file.path(output_dir, file_name))
 
 # Load all simulations
@@ -105,12 +105,12 @@ dynamic_bar_sim_plot <- ggplot(dynamic_data, aes(x=factor(gene_number, gene_labe
              linetype="dashed", color = "gray40") +
   geom_vline(xintercept = (match(c("11"), gene_labels)) - 0.5) +
   theme(legend.position = "none") +
-  labs(x="gene", y="simulated proteins", title=sprintf("ribosome speed = %.1f and trna count = %d", ribo_speed, trna_count)) +
+  labs(x="gene", y="simulated proteins", title=sprintf("ribosome speed = %.6f     trna count = %d     time = %d", ribo_speed, trna_count, max_time)) +
   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
   scale_y_continuous(expand = c(0,0)) +
   scale_fill_manual(values=cbPalette)
 
 if (SAVE_FIGS) {
-  save_plot(sprintf("analysis/figures/revised_protein_counts_dynamic_fop%.1f_pref%.1f_charge%d_ribospeed%.1f_trna%d.pdf", fop_proportion, pref_val, charge_val, ribo_speed, trna_count), dynamic_bar_sim_plot, base_width = 8, base_height = 7)
+  save_plot(sprintf("analysis/figures/revised_protein_counts_dynamic_fop%.1f_pref%.1f_charge%d_ribospeed%.6f_trna%d.pdf", fop_proportion, pref_val, charge_val, ribo_speed, trna_count), dynamic_bar_sim_plot, base_width = 8, base_height = 7)
 }
 ```

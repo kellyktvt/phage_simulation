@@ -1,0 +1,180 @@
+---
+title: "Fraction of Optimal Codons x Fitness - Revised Weighted & Dynamic"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+setwd("/stor/work/Wilke/kelly/phage_simulation")
+
+library(tidyverse)
+library(ggplot2)
+library(gtools)
+library(stringr)
+library(cowplot)
+library(readxl)
+SAVE_FIGS <- TRUE
+
+cbPalette <- c("#CC79A7", "#56B4E9", "#E69F00", "#F0E442", "#0072B2", "#D55E00", "#009E73", "#999999")
+
+# These are genes that are not included in the simulation and should be removed before comparing
+# simulations with experimental data
+IGNORE_GENES <- c("gene 10B",
+                "possible gene 5.5-5.7",
+                "gene 1.5",
+                "gene 1.6",
+                "gene 4.1",
+                "gene 4B",
+                "gene 0.6A",
+                "gene 0.6B",
+                "possible gene 0.6B",
+                "gene 0.5",
+                "gene 0.4")
+```
+
+```{r}
+labels <- read_csv("output/id_map.csv") %>% filter(!is.na(gene_number))
+load_sim <- function(paths) {
+  data_list <- lapply(paths, function(path) {   # loop through each file path in paths
+    read_tsv(path) %>%   # read the tsv file at the given path
+      mutate(file = path) %>%   # add column 'file' for file path
+      group_by(time) %>%   # group by time
+      nest() %>%   # convert each group in a nested data frame of 2 columns: time and data (all the rows for that time point)
+      mutate(data = purrr::map(data, ~full_join(labels, ., by = c("pinetree" = "species")))) %>%   # join with the labels data frame
+      unnest(cols = c(data)) %>%   # expand the nested data back into a flat data frame
+      mutate(time = round(time)) %>%   # round the time column
+      mutate(protein = if_else(is.na(protein), 0, protein),   # replace missing protein and transcript values with 0
+             transcript = if_else(is.na(transcript), 0, as.numeric(transcript))) %>%
+      filter(!(pinetree %in% IGNORE_GENES), !is.na(gene_number))   # filter out unwanted genes
+  })
+  bind_rows(data_list)   # combine data frames in data_list into a single data frame
+}
+```
+
+```{r}
+max_time <- 1200
+gene_name <- "10A"
+fops <- seq(0, 0.7, by = 0.1)
+
+########## Weighted Model
+opt_val <- 1.0
+nonopt_val <- 0.25
+weighted_output_dir <- sprintf("data/simulation/phage/revised_weighted_opt%.1f_nonopt%.2f", opt_val, nonopt_val)
+
+# Generate file paths
+seeds <- 1:3
+file_paths <- expand.grid(seed = seeds, fop = fops) %>%
+  mutate(output_dir = weighted_output_dir) %>%
+  mutate(file_name = sprintf("revised_weighted_opt%.1f_nonopt%.2f_%d_fop%.1f.tsv", opt_val, nonopt_val, seed, fop)) %>%
+  mutate(full_path = file.path(output_dir, file_name))
+
+# Load all simulations
+weighted_data <- load_sim(file_paths$full_path)
+
+# Add seed and fop columns and filter to include only the specified gene and max time
+weighted_data <- weighted_data %>%
+  mutate(
+    seed = as.numeric(str_extract(file, "(?<=_)[0-9]+(?=_fop)")),
+    fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+\\.[0-9]")),
+  ) %>%
+  filter(time == max_time, str_detect(pinetree, paste("gene", gene_name)))
+
+# Calculate average proteins for each proportion 
+weighted_data <- weighted_data %>%
+  group_by(fop) %>%  
+  summarize(avg_protein = mean(protein), .groups = "drop")
+
+# Calculate fitness using the equations below:
+# intrinsic growth rate: r = ((protein / 400) * exp(-12 * r) - 1) / 1
+# doublings per hour: d = log2(exp(60 * r))
+weighted_data <- weighted_data %>%
+  mutate(
+    r = map_dbl(avg_protein, ~ {
+      f <- function(r) ((.x / 400) * exp(-12 * r) - 1)
+      res <- tryCatch(uniroot(f, lower = -1, upper = 1)$root, error = function(e) NA)
+      return(res)
+    }),
+    fitness = log2(exp(60 * r)),  # Compute doublings per hour
+  )
+
+# Normalize fitness values
+weighted_data <- weighted_data %>%
+  mutate(normalized_fitness = fitness / max(fitness))
+
+########## Dynamic Model
+pref_val <- 0.7
+charge_val <- 10
+ribo_speed <- 0.0008
+trna_count <- 50000
+dynamic_output_dir <- sprintf("data/simulation/phage/revised_dynamic_pref%.1f_charge%d_ribospeed%.4f", pref_val, charge_val, ribo_speed)
+
+# Generate file paths
+seeds <- 1:2
+file_paths <- expand.grid(seed = seeds, fop = fops, pref_val = pref_val, ribo_speed = ribo_speed, trna_count = trna_count) %>%
+  mutate(output_dir = dynamic_output_dir) %>%
+  mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%.1f_ribospeed%.4f_trna%d.tsv", pref_val, seed, fop, ribo_speed, trna_count)) %>%
+  mutate(full_path = file.path(output_dir, file_name))
+
+# Load all simulations
+dynamic_data <- load_sim(file_paths$full_path)
+
+# Add seed and fop columns and filter to include only the specified gene and max time
+dynamic_data <- dynamic_data %>%
+  mutate(
+    seed = as.numeric(str_extract(file, "(?<=_)[0-9]+(?=_fop)")),
+    fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+\\.[0-9]")),
+  ) %>%
+  filter(time == max_time, str_detect(pinetree, paste("gene", gene_name)))
+
+# Calculate average proteins for each proportion
+dynamic_data <- dynamic_data %>%
+  group_by(fop) %>%  
+  summarize(avg_protein = mean(protein), .groups = "drop")
+
+# Calculate fitness using the equations below:
+# intrinsic growth rate: r = ((protein / 400) * exp(-12 * r) - 1) / 1
+# doublings per hour: d = log2(exp(60 * r))
+dynamic_data <- dynamic_data %>%
+  mutate(
+    r = map_dbl(avg_protein, ~ {
+      f <- function(r) ((.x / 400) * exp(-12 * r) - 1)
+      res <- tryCatch(uniroot(f, lower = -1, upper = 1)$root, error = function(e) NA)
+      return(res)
+    }),
+    fitness = log2(exp(60 * r)),  # Compute doublings per hour
+  )
+
+# Normalize fitness values
+dynamic_data <- dynamic_data %>%
+  mutate(normalized_fitness = fitness / max(fitness))
+
+########## Combine Data
+
+# Combine weighted and dynamic data into one data frame
+combined_data <- bind_rows(
+  weighted_data %>% mutate(model = "Weighted"),
+  dynamic_data %>% mutate(model = "Dynamic")
+)
+
+# Filter data to include only fop values from 0.7 to 0
+combined_data <- combined_data %>%
+  filter(fop <= 0.7)
+```
+
+```{r}
+# Create the plot for weighted model
+combined_plot <- ggplot(combined_data, aes(x = fop, y = normalized_fitness, color = model)) +
+  geom_point(shape = 16, size = 5)+
+  # geom_smooth(method = "gam", formula = y ~ s(x, bs = "cs"), se = FALSE, size = 0.75) +
+  geom_smooth(method = "lm", se = FALSE, size = 0.75) +
+  labs(x = "FOP", y = sprintf("Gene %s Fitness (doublings per hour)", gene_name)) +
+  theme_minimal() +
+  scale_color_manual(values = c("Weighted" = cbPalette[1], "Dynamic" = cbPalette[2])) +
+  scale_x_continuous(breaks = seq(0, 1.0, by = 0.1), labels = seq(0, 1.0, by = 0.1), trans = "reverse") +
+  ylim(0, 1)
+
+if (SAVE_FIGS) {
+  save_plot(sprintf("analysis/figures/revised_fopXfitness_weighted_opt%.1f_nonopt%.2f_dynamic_ribospeed%.4f.pdf", opt_val, nonopt_val, ribo_speed), combined_plot, base_width = 10, base_height = 8)
+}
+```

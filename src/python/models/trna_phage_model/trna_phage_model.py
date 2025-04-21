@@ -358,7 +358,7 @@ def main(fop, charge_rate, pref_proportion, seed_val, ribo_speed, trna_count):
     sim.seed(seed_val)
 
     # generate a unique filename based on the charge
-    output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/revised_dynamic_pref0.7_charge10_ribospeed0.0008"
+    output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/revised_dynamic_pref0.7_charge0.5_ribospeed1.5"
     output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop}_ribospeed{ribo_speed}_trna{trna_count}.tsv")
 
     sim.simulate(time_limit=1200, time_step=5, 
@@ -372,7 +372,7 @@ if __name__ == "__main__":
     # fraction of optimal codons
     fop = float(sys.argv[1])
     # tRNA charging rate
-    charge_rate = int(sys.argv[2])
+    charge_rate = float(sys.argv[2])
     # proportion of preferred tRNAs
     pref_proportion = float(sys.argv[3])
     # seed value

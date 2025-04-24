@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH -J codon-deoptimization     # job name
-#SBATCH -o codon-deoptimization.o%j # output and error file name (%j expands to SLURM jobID)
+#SBATCH -J revised_40     # job name
+#SBATCH -o revised_40.o%j # output and error file name (%j expands to SLURM jobID)
 #SBATCH -N 1                        # number of nodes requested
 #SBATCH -n 128                      # total number of tasks to run in parallel
 #SBATCH -p normal                   # queue (partition) 
@@ -11,6 +11,6 @@ module load launcher
 source /work/10081/kellyktvt/ls6/pinetree/.venv-trnas/bin/activate
 
 export LAUNCHER_WORKDIR=/work/10081/kellyktvt/ls6/phage_simulation
-export LAUNCHER_JOB_FILE=/work/10081/kellyktvt/ls6/phage_simulation/src/python/models/trna_phage_model/jobs_revised_dynamic.txt
+export LAUNCHER_JOB_FILE=/work/10081/kellyktvt/ls6/phage_simulation/src/python/models/trna_phage_model/jobs_revised_dynamic_40.txt
 
 ${LAUNCHER_DIR}/paramrun

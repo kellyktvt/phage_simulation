@@ -104,16 +104,16 @@ weighted_data <- weighted_data %>%
 
 ########## Dynamic Model
 pref_val <- 0.7
-charge_val <- 10
-ribo_speed <- 0.0008
+charge_val <- 0.5
+ribo_speed <- 1.5
 trna_count <- 50000
-dynamic_output_dir <- sprintf("data/simulation/phage/revised_dynamic_pref%.1f_charge%d_ribospeed%.4f", pref_val, charge_val, ribo_speed)
+dynamic_output_dir <- sprintf("data/simulation/phage/revised_dynamic_pref%.1f_charge%.1f_ribospeed%.1f", pref_val, charge_val, ribo_speed)
 
 # Generate file paths
 seeds <- 1:2
 file_paths <- expand.grid(seed = seeds, fop = fops, pref_val = pref_val, ribo_speed = ribo_speed, trna_count = trna_count) %>%
   mutate(output_dir = dynamic_output_dir) %>%
-  mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%.1f_ribospeed%.4f_trna%d.tsv", pref_val, seed, fop, ribo_speed, trna_count)) %>%
+  mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%.1f_ribospeed%.1f_trna%d.tsv", pref_val, seed, fop, ribo_speed, trna_count)) %>%
   mutate(full_path = file.path(output_dir, file_name))
 
 # Load all simulations
@@ -175,6 +175,6 @@ combined_plot <- ggplot(combined_data, aes(x = fop, y = normalized_fitness, colo
   ylim(0, 1)
 
 if (SAVE_FIGS) {
-  save_plot(sprintf("analysis/figures/revised_fopXfitness_weighted_opt%.1f_nonopt%.2f_dynamic_ribospeed%.4f.pdf", opt_val, nonopt_val, ribo_speed), combined_plot, base_width = 10, base_height = 8)
+  save_plot(sprintf("analysis/figures/revised_fopXfitness_weighted_opt%.1f_nonopt%.2f_dynamic_ribospeed%.1f.pdf", opt_val, nonopt_val, ribo_speed), combined_plot, base_width = 10, base_height = 8)
 }
 ```

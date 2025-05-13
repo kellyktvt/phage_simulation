@@ -56,15 +56,13 @@ load_sim <- function(paths) {
 max_time <- 760
 gene_name <- "10A"
 fops <- seq(0, 1.0, by = 0.05)
-pref_val <- 0.7
 
 # Function to process data for a given charge and ribo_speed with 1 decimal place
-process_dynamic_data_1decimal <- function(charge_val, ribo_speed, trna_count) {
-  group_name <- sprintf("charge%.1f_ribospeed%.1f_trna%d", charge_val, ribo_speed, trna_count)
+process_dynamic_data_1decimal <- function(charge_val, ribo_speed, trna_count, pref_val) {
   dynamic_output_dir <- sprintf("data/simulation/phage/revised_dynamic_pref%.1f_charge%.1f_ribospeed%.1f", pref_val, charge_val, ribo_speed)
   
   # Generate file paths
-  seeds <- 1:2
+  seeds <- 1:3
   file_paths <- expand.grid(seed = seeds, fop = fops, pref_val = pref_val, ribo_speed = ribo_speed, trna_count = trna_count) %>%
     mutate(output_dir = dynamic_output_dir) %>%
     mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%.1f_ribospeed%.1f_trna%d.tsv", pref_val, seed, fop, ribo_speed, trna_count)) %>%
@@ -73,11 +71,11 @@ process_dynamic_data_1decimal <- function(charge_val, ribo_speed, trna_count) {
   # Load all simulations
   dynamic_data <- load_sim(file_paths$full_path)
   
-  # Add seed, fop, and group columns and filter to include only the specified gene and max time
+  # Add fop and trna_count columns and filter to include only the specified gene and max time
   dynamic_data <- dynamic_data %>%
     mutate(
       fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+\\.[0-9]")),
-      group = group_name
+      trna_count = trna_count
     ) %>%
     filter(time == max_time, str_detect(pinetree, paste("gene", gene_name)))
 
@@ -85,18 +83,17 @@ process_dynamic_data_1decimal <- function(charge_val, ribo_speed, trna_count) {
     dynamic_data <- dynamic_data %>%
       group_by(fop) %>%  
       summarize(avg_protein = mean(protein), .groups = "drop") %>%
-      mutate(group = unique(dynamic_data$group))  # Re-add group column
+      mutate(trna_count = unique(dynamic_data$trna_count))  # Re-add group column
   
   return(dynamic_data)
 }
 
 # Function to process data for a given charge and ribo_speed with 2 decimal places
-process_dynamic_data_2decimal <- function(charge_val, ribo_speed, trna_count) {
-  group_name <- sprintf("charge%.2f_ribospeed%.2f_trna%d", charge_val, ribo_speed, trna_count)
+process_dynamic_data_2decimal <- function(charge_val, ribo_speed, trna_count, pref_val) {
   dynamic_output_dir <- sprintf("data/simulation/phage/revised_dynamic_pref%.1f_charge%.2f_ribospeed%.2f", pref_val, charge_val, ribo_speed)
   
   # Generate file paths
-  seeds <- 1:2
+  seeds <- 1:3
   file_paths <- expand.grid(seed = seeds, fop = fops, pref_val = pref_val, ribo_speed = ribo_speed, trna_count = trna_count) %>%
     mutate(output_dir = dynamic_output_dir) %>%
     mutate(file_name = sprintf("trna_phage_pref%.1f_%d_fop%.1f_ribospeed%.2f_trna%d.tsv", pref_val, seed, fop, ribo_speed, trna_count)) %>%
@@ -105,11 +102,11 @@ process_dynamic_data_2decimal <- function(charge_val, ribo_speed, trna_count) {
   # Load all simulations
   dynamic_data <- load_sim(file_paths$full_path)
   
-  # Add seed, fop, and group columns and filter to include only the specified gene and max time
+  # Add fop and trna_count columns and filter to include only the specified gene and max time
   dynamic_data <- dynamic_data %>%
     mutate(
       fop = as.numeric(str_extract(file, "(?<=fop)[0-9]+\\.[0-9]")),
-      group = group_name
+      trna_count = trna_count
     ) %>%
     filter(time == max_time, str_detect(pinetree, paste("gene", gene_name)))
 
@@ -117,31 +114,46 @@ process_dynamic_data_2decimal <- function(charge_val, ribo_speed, trna_count) {
     dynamic_data <- dynamic_data %>%
       group_by(fop) %>%  
       summarize(avg_protein = mean(protein), .groups = "drop") %>%
-      mutate(group = unique(dynamic_data$group))  # Re-add group column
+      mutate(trna_count = unique(dynamic_data$trna_count))  # Re-add group column
   
   return(dynamic_data)
 }
 
-# Process data for all three sets
-data_1 <- process_dynamic_data_2decimal(0.25, 0.75, 100000)
-data_2 <- process_dynamic_data_1decimal(2.5, 7.5, 10000)
-data_3 <- process_dynamic_data_1decimal(25.0, 75.0, 1000)
+# Process data for all three sets of data for pref_val = 0.5
+pref5_data1 <- process_dynamic_data_2decimal(0.25, 0.75, 100000, 0.5)
+pref5_data2 <- process_dynamic_data_1decimal(2.5, 7.5, 10000, 0.5)
+pref5_data3 <- process_dynamic_data_1decimal(25.0, 75.0, 1000, 0.5)
 
-# Combine all data
-combined_data <- bind_rows(data_1, data_2, data_3)
+# Combine data for pref_val = 0.5
+pref5_combined_data <- bind_rows(pref5_data1, pref5_data2, pref5_data3)
+
+# Process data for all three sets of data for pref_val = 0.7
+pref7_data1 <- process_dynamic_data_2decimal(0.25, 0.75, 100000, 0.7)
+pref7_data2 <- process_dynamic_data_1decimal(2.5, 7.5, 10000, 0.7)
+pref7_data3 <- process_dynamic_data_1decimal(25.0, 75.0, 1000, 0.7)
+
+# Combine data for pref_val = 0.7
+pref7_combined_data <- bind_rows(pref7_data1, pref7_data2, pref7_data3)
+
+# Combine all data for plotting
+combined_data <- bind_rows(
+  pref5_combined_data %>% mutate(pref_val = 0.5),
+  pref7_combined_data %>% mutate(pref_val = 0.7)
+)
 ```
 
 ```{r}
-# Create the plot for all three sets
-combined_plot <- ggplot(combined_data, aes(x = fop, y = avg_protein, color = group)) +
+# Create the plot
+combined_plot <- ggplot(combined_data, aes(x = fop, y = avg_protein, color = factor(trna_count))) +
   geom_point(shape = 16, size = 3) +
-  geom_smooth(method = "lm", se = FALSE, size = 0.75) +
-  labs(x = "FOP", y = sprintf("Gene %s Protein Abundance", gene_name), color = "Parameter Scaling") +
-  theme_minimal() +
-  scale_color_manual(values = c("charge0.25_ribospeed0.75_trna100000" = cbPalette[1], "charge2.5_ribospeed7.5_trna10000" = cbPalette[2], "charge25.0_ribospeed75.0_trna1000" = cbPalette[3])) +
-  scale_x_continuous(breaks = seq(0, 1.0, by = 0.05), labels = seq(0, 1.0, by = 0.05), trans = "reverse")
+  geom_line(size = 0.75) +
+  labs(x = expression(f[op]), y = sprintf("Gene %s Protein Abundance", gene_name), color = "tRNA Count") +
+  theme_bw(base_size = 12) +
+  scale_x_continuous(breaks = seq(0, 1.0, by = 0.25), labels = seq(0, 1.0, by = 0.25), trans = "reverse") +
+  scale_color_manual(values = cbPalette) +
+  facet_wrap(~ pref_val, labeller = labeller(pref_val = c(`0.5` = "Proportion of Preferred tRNAs = 0.5", `0.7` = "Proportion of Preferred tRNAs = 0.7")))
 
 if (SAVE_FIGS) {
-  save_plot(sprintf("analysis/figures/revised_fopXproteins_scaling_pref_%.1f.pdf", pref_val), combined_plot, base_width = 12, base_height = 6)
+  save_plot(sprintf("analysis/figures/revised_fopXproteins_scaling_2prefs.pdf"), combined_plot, base_width = 12, base_height = 6)
 }
 ```

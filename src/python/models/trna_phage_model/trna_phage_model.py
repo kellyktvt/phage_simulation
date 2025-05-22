@@ -229,8 +229,8 @@ def main(fop, charge_rate, pref_proportion, seed_val, ribo_speed, trna_count):
 
     # Replace the original gene 10A sequence with the randomized sequence
     record.seq = record.seq[:gene10_start] + randomized_sequence + record.seq[gene10_stop:]
-    print(f"Randomized gene 10A sequence with {fop*100}% optimal codons")
-    print(record.seq[gene10_start:gene10_stop])
+    # print(f"Randomized gene 10A sequence with {fop*100}% optimal codons")
+    # print(record.seq[gene10_start:gene10_stop])
 
     phage = pt.Genome(name="phage", length=len(record.seq))
     phage.add_sequence(str(record.seq))
@@ -358,10 +358,11 @@ def main(fop, charge_rate, pref_proportion, seed_val, ribo_speed, trna_count):
     sim.seed(seed_val)
 
     # generate a unique filename based on the charge
-    output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/revised_dynamic_pref{pref_proportion}_charge{charge_rate}_ribospeed{ribo_speed}"
+    # output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/revised_dynamic_pref{pref_proportion}_charge{charge_rate}_ribospeed{ribo_speed}"
+    output_dir = f"data/simulation/phage/revised_dynamic_pref{pref_proportion}_charge{charge_rate}_ribospeed{ribo_speed}"
     output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop}_ribospeed{ribo_speed}_trna{trna_count}.tsv")
 
-    sim.simulate(time_limit=1200, time_step=10, 
+    sim.simulate(time_limit=1200, time_step=100, 
                  output=output_filename)
 
 #--------------------------------------------------------------------------

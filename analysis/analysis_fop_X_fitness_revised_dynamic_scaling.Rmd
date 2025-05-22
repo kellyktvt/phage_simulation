@@ -55,7 +55,7 @@ load_sim <- function(paths) {
 ```{r}
 max_time <- 760
 gene_name <- "10A"
-fops <- seq(0, 1.0, by = 0.05)
+fops <- seq(0, 1.0, by = 0.1)
 
 # Function to process data for a given charge and ribo_speed with 1 decimal place
 process_dynamic_data_1decimal <- function(charge_val, ribo_speed, trna_count, pref_val) {
@@ -84,6 +84,23 @@ process_dynamic_data_1decimal <- function(charge_val, ribo_speed, trna_count, pr
       group_by(fop) %>%  
       summarize(avg_protein = mean(protein), .groups = "drop") %>%
       mutate(trna_count = unique(dynamic_data$trna_count))  # Re-add group column
+
+    # Calculate fitness using the equations below:
+    # intrinsic growth rate: r = ((protein / 400) * exp(-12 * r) - 1) / 1
+    # doublings per hour: d = log2(exp(60 * r))
+    dynamic_data <- dynamic_data %>%
+      mutate(
+        r = map_dbl(avg_protein, ~ {
+          f <- function(r) ((.x / 400) * exp(-12 * r) - 1)
+          res <- tryCatch(uniroot(f, lower = -1, upper = 1)$root, error = function(e) NA)
+          return(res)
+        }),
+        fitness = log2(exp(60 * r)),  # Compute doublings per hour
+      )
+
+    # Normalize fitness values
+    dynamic_data <- dynamic_data %>%
+      mutate(normalized_fitness = fitness / max(fitness))
   
   return(dynamic_data)
 }
@@ -115,6 +132,23 @@ process_dynamic_data_2decimal <- function(charge_val, ribo_speed, trna_count, pr
       group_by(fop) %>%  
       summarize(avg_protein = mean(protein), .groups = "drop") %>%
       mutate(trna_count = unique(dynamic_data$trna_count))  # Re-add group column
+
+    # Calculate fitness using the equations below:
+    # intrinsic growth rate: r = ((protein / 400) * exp(-12 * r) - 1) / 1
+    # doublings per hour: d = log2(exp(60 * r))
+    dynamic_data <- dynamic_data %>%
+      mutate(
+        r = map_dbl(avg_protein, ~ {
+          f <- function(r) ((.x / 400) * exp(-12 * r) - 1)
+          res <- tryCatch(uniroot(f, lower = -1, upper = 1)$root, error = function(e) NA)
+          return(res)
+        }),
+        fitness = log2(exp(60 * r)),  # Compute doublings per hour
+      )
+
+    # Normalize fitness values
+    dynamic_data <- dynamic_data %>%
+      mutate(normalized_fitness = fitness / max(fitness))
   
   return(dynamic_data)
 }

@@ -358,8 +358,10 @@ def main(fop, charge_rate, pref_proportion, seed_val, ribo_speed, trna_count):
     sim.seed(seed_val)
 
     # generate a unique filename based on the charge
-    # output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/revised_dynamic_pref{pref_proportion}_charge{charge_rate}_ribospeed{ribo_speed}"
-    output_dir = f"data/simulation/phage/revised_dynamic_pref{pref_proportion}_charge{charge_rate}_ribospeed{ribo_speed}"
+    output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/revised_dynamic_pref{pref_proportion}_charge{charge_rate}_ribospeed{ribo_speed}"
+    # output_dir = f"data/simulation/phage/revised_dynamic_pref{pref_proportion}_charge{charge_rate}_ribospeed{ribo_speed}"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     output_filename = os.path.join(output_dir, f"trna_phage_pref{pref_proportion}_{seed_val}_fop{fop}_ribospeed{ribo_speed}_trna{trna_count}.tsv")
 
     sim.simulate(time_limit=1200, time_step=100, 

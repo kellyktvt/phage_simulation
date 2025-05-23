@@ -342,14 +342,15 @@ def main(fop, opt_weight, nonopt_weight, seed_val):
     sim.seed(seed_val)
 
     # generate a unique filename based on the charge
-    output_dir = f"data/simulation/phage/revised_weighted_opt{opt_weight}_nonopt{nonopt_weight}"
+    output_dir = f"/scratch/10081/kellyktvt/trna_parallel_output/revised_weighted_opt{opt_weight}_nonopt{nonopt_weight}"
+    # output_dir = f"data/simulation/phage/revised_weighted_opt{opt_weight}_nonopt{nonopt_weight}"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     output_filename = os.path.join(output_dir, f"revised_weighted_opt{opt_weight}_nonopt{nonopt_weight}_{seed_val}_fop{fop}.tsv")
 
     print("Starting simulation...")
     try:
-        sim.simulate(time_limit=1200, time_step=5, 
+        sim.simulate(time_limit=1200, time_step=100, 
                     output=output_filename)
         print("Simulation completed.")
     except Exception as e:

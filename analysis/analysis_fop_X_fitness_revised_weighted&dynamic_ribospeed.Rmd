@@ -55,7 +55,7 @@ load_sim <- function(paths) {
 ```{r}
 max_time <- 1200
 gene_name <- "10A"
-fops <- seq(0, 0.7, by = 0.1)
+fops <- seq(0, 1.0, by = 0.1)
 
 ########## Weighted Model
 opt_val <- 1.0
